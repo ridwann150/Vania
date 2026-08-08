@@ -1,96 +1,25 @@
-# AGENTS — Coding Rules
+# OpenCode Agent Instructions
 
-You are helping build a beginner-friendly portfolio CMS.
+## Role & Goal
+You are an expert Full-Stack Developer agent. Your task is to build a modern dynamic portfolio with an integrated Supabase CMS and an Auto-ATS Resume generator based on `prd.md`.
 
-## General Rules
+## Workflow Rules
+1. Read `prd.md` carefully before executing any prompt.
+2. Execute tasks incrementally in 3 core phases:
+   - Phase 1: Setup layout & components for Public View (Brittany Chiang style, Mouse spotlight, Responsive Mobile Hamburger, Dark/Light mode).
+   - Phase 2: Integrate Supabase Database & Auth for `/admin` Dashboard (CRUD Operations).
+   - Phase 3: Implement Auto-Generate ATS CV PDF engine.
+3. Write clean, modular, and well-commented code.
+4. Ensure mobile responsiveness is tested and verified at every step.
 
-- Use JavaScript only
-- Do NOT use TypeScript
-- Keep architecture simple
-- Explain important code with comments
-- Prefer readability over clever code
+## Ponytail Rules (Anti-Overengineering)
+- ALWAYS check for native browser/language features before installing third-party packages (e.g., use `<input type="date">` instead of installing heavy datepicker libraries).
+- Keep code minimal, clean, and dependency-free whenever possible.
+- Avoid wrapping components or creating unnecessary abstraction layers unless requested.
 
----
+## Context & Memory Tracking
+- Check files in `.ai/` (`STATUS.md`, `DECISIONS.md`) before working.
+- Keep `.ai/STATUS.md` updated as features are completed.
 
-## Backend Rules
-
-- Use Express.js
-- Use Prisma ORM
-- Use async/await
-- Return JSON responses
-- Add try/catch for controllers
-- Use REST API conventions
-
-Example response:
-
-{
-  "success": true,
-  "data": []
-}
-
----
-
-## Frontend Rules
-
-- Use Next.js App Router
-- Use Tailwind CSS
-- Keep components small
-- Avoid unnecessary libraries
-- Mobile-first responsive design
-
----
-
-## Database Rules
-
-- PostgreSQL only
-- Use UUID for IDs
-- Use createdAt and updatedAt fields
-
----
-
-## Authentication Rules
-
-- Use bcrypt for password hashing
-- Use JWT stored in HTTP-only cookie if needed
-- Create auth middleware for protected routes
-
----
-
-## File Structure
-
-backend/
-  src/
-    controllers/
-    routes/
-    middleware/
-    prisma/
-
-frontend/
-  app/
-  components/
-  lib/
-
----
-
-## When generating code
-
-- Generate complete files
-- Include import statements
-- Include export statements
-- Do not leave TODO placeholders
-- Do not generate Docker files
-- Do not generate Kubernetes files
-- Do not generate CI/CD files unless requested
-
----
-
-## Teaching Mode
-
-The user is still learning backend development.
-
-When writing code:
-- briefly explain what each file does,
-- explain why a package is used,
-- and mention how to test the endpoint.
-
-Keep explanations short and practical.
+## Prompt Execution Guidelines
+When working on code requests, reference the target phase from `prd.md` and keep all CSS variables scalable for dark/light theme switching.

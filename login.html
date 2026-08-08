@@ -1,26 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login | Ridwan Maulana</title>
+    <title>Login Admin | Vania Anggraini</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            position: relative;
+            background-color: var(--bg);
+        }
+        .login-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .site-footer-login {
+            position: absolute;
+            bottom: 1.5rem;
+            width: 100%;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <nav>
-            <h1>Full Stack Developer</h1>
-           <div class="Menu">
-    <a href="./">Home</a>
-    <a href="./#about">About</a>
-    <a href="./#projects">Projects</a>
-    <a href="login.html">Login</a>
-</div>
-        </nav>
-    </header>
 
-    <main class="manage-page">
+    <div class="login-wrapper">
         <div class="auth-card">
             <h2>LOGIN ADMIN</h2>
             <p class="auth-subtitle">Sign in to manage portfolio projects</p>
@@ -38,15 +51,15 @@
 
                 <p id="loginError" class="form-message error"></p>
 
-                <button type="submit" class="btn-primary">Login</button>
+                <button type="submit" class="btn-primary" style="width: 100%;">Login</button>
             </form>
 
-            <a href="./" class="auth-back">&larr; Back to Portfolio</a>
+            <a href="index.html" class="auth-back">&larr; Back to Portfolio</a>
         </div>
-    </main>
+    </div>
 
-    <footer>
-        <p>&copy; 2026 MHD Ridwan Maulana</p>
+    <footer class="site-footer-login">
+        <p>&copy; 2026 MHD Ridwan Maulana. All rights reserved.</p>
     </footer>
 
     <script src="script.js"></script>

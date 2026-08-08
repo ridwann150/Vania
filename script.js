@@ -1,29 +1,120 @@
-console.log("Hello Ridwan! JavaScript connected successfully.");
+console.log("Vania Anggraini | Portfolio loaded.");
 
-// ─── Hamburger Menu ───────────────────────────────────────────────────────────
+const API_BASE_URL = "https://vania-backend.vercel.app/api";
+
+// ─── Theme Toggle ─────────────────────────────────────────────────────────────
+
+const THEME_KEY = "portfolio_theme";
+
+function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    const icon = document.getElementById("themeIcon");
+    if (icon) {
+        icon.className = theme === "dark" ? "fa-solid fa-moon" : "fa-solid fa-sun";
+    }
+    localStorage.setItem(THEME_KEY, theme);
+}
+
+(function initTheme() {
+    const saved = localStorage.getItem(THEME_KEY);
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    applyTheme(saved || (prefersDark ? "dark" : "light"));
+})();
+
+const themeToggle = document.getElementById("themeToggle");
+if (themeToggle) {
+    themeToggle.addEventListener("click", function () {
+        const current = document.documentElement.getAttribute("data-theme");
+        applyTheme(current === "dark" ? "light" : "dark");
+    });
+}
+
+// ─── Mouse Spotlight Effect ───────────────────────────────────────────────────
+
+const spotlight = document.getElementById("spotlight");
+if (spotlight) {
+    document.addEventListener("mousemove", function (e) {
+        document.documentElement.style.setProperty("--mouse-x", e.clientX + "px");
+        document.documentElement.style.setProperty("--mouse-y", e.clientY + "px");
+    });
+}
+
+// ─── Hamburger / Mobile Sidebar ───────────────────────────────────────────────
 
 const hamburgerBtn = document.getElementById("hamburgerBtn");
-const navMenu = document.getElementById("navMenu");
+const sidebar = document.getElementById("sidebar");
+const mobileOverlay = document.getElementById("mobileOverlay");
 
-if (hamburgerBtn && navMenu) {
+function closeSidebar() {
+    if (!sidebar) return;
+    sidebar.classList.remove("open");
+    if (hamburgerBtn) {
+        hamburgerBtn.classList.remove("active");
+        hamburgerBtn.setAttribute("aria-expanded", "false");
+    }
+    if (mobileOverlay) mobileOverlay.classList.remove("active");
+    document.body.style.overflow = "";
+}
+
+function openSidebar() {
+    if (!sidebar) return;
+    sidebar.classList.add("open");
+    if (hamburgerBtn) {
+        hamburgerBtn.classList.add("active");
+        hamburgerBtn.setAttribute("aria-expanded", "true");
+    }
+    if (mobileOverlay) mobileOverlay.classList.add("active");
+    document.body.style.overflow = "hidden";
+}
+
+if (hamburgerBtn) {
     hamburgerBtn.addEventListener("click", function () {
-        const isOpen = navMenu.classList.toggle("open");
-        hamburgerBtn.classList.toggle("active", isOpen);
-        hamburgerBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+        if (sidebar && sidebar.classList.contains("open")) {
+            closeSidebar();
+        } else {
+            openSidebar();
+        }
     });
+}
 
-    navMenu.querySelectorAll("a").forEach(function (link) {
+if (mobileOverlay) {
+    mobileOverlay.addEventListener("click", closeSidebar);
+}
+
+const sidebarNav = document.getElementById("sidebarNav");
+if (sidebarNav) {
+    sidebarNav.querySelectorAll("a").forEach(function (link) {
         link.addEventListener("click", function () {
-            navMenu.classList.remove("open");
-            hamburgerBtn.classList.remove("active");
-            hamburgerBtn.setAttribute("aria-expanded", "false");
+            if (window.innerWidth <= 768) closeSidebar();
         });
     });
 }
 
+// ─── Active nav link on scroll ────────────────────────────────────────────────
+
+const navLinks = document.querySelectorAll(".nav-link[data-section]");
+const sections = document.querySelectorAll(".section[id]");
+
+function updateActiveNav() {
+    if (!navLinks.length || !sections.length) return;
+    let current = "";
+    const scrollY = window.scrollY || window.pageYOffset;
+    sections.forEach(function (section) {
+        if (scrollY >= section.offsetTop - 140) {
+            current = section.getAttribute("id");
+        }
+    });
+    navLinks.forEach(function (link) {
+        link.classList.toggle("active", link.getAttribute("data-section") === current);
+    });
+}
+
+window.addEventListener("scroll", updateActiveNav, { passive: true });
+updateActiveNav();
+
+// ─── Auth helpers ─────────────────────────────────────────────────────────────
+
 const AUTH_KEY = "isLoggedIn";
-const PROJECTS_KEY = "portfolio_projects";
-const PROJECTS_LANG_KEY = "portfolio_projects_lang_v2";
 
 function isLoggedIn() {
     return localStorage.getItem(AUTH_KEY) === "true";
@@ -34,129 +125,27 @@ function setLoggedIn(value) {
         localStorage.setItem(AUTH_KEY, "true");
     } else {
         localStorage.removeItem(AUTH_KEY);
+        localStorage.removeItem("adminToken");
     }
 }
 
-const DEFAULT_PROJECTS = [
-    {
-        id: 1,
-        title: "Portfolio Website",
-        description:
-            "My personal developer portfolio built with semantic HTML5, modern CSS 3 layout, and responsive design concepts.",
-        link: "index.html#home",
-        images: []
-    }
-];
+// ─── localStorage helpers ─────────────────────────────────────────────────────
 
-function migrateProjectsToEnglish(projects) {
-    if (localStorage.getItem(PROJECTS_LANG_KEY) === "done") {
-        return projects;
-    }
+var LS_KEYS = {
+    about: "va_about",
+    experiences: "va_experiences",
+    projects: "va_projects"
+};
 
-    const map = [
-        {
-            matchTitle: /portofolio/i,
-            title: "Portfolio Website",
-            description:
-                "My personal developer portfolio built with semantic HTML5, modern CSS 3 layout, and responsive design concepts."
-        },
-        {
-            matchTitle: /website e-?commerce|e-?commerce/i,
-            title: "E-Commerce Website",
-            description:
-                "A modern e-commerce website with product catalog, shopping cart, and responsive design for all devices."
-        },
-        {
-            matchTitle: /landing page/i,
-            title: "Landing Page",
-            description:
-                "A clean and conversion-focused landing page built with semantic HTML and modern CSS."
-        },
-        {
-            matchTitle: /blog/i,
-            title: "Blog Website",
-            description:
-                "A blog website with article listing, detail pages, and a clean reading experience."
-        },
-        {
-            matchTitle: /dashboard/i,
-            title: "Admin Dashboard",
-            description:
-                "An admin dashboard for managing data with a clear layout and responsive interface."
-        }
-    ];
-
-    const updated = projects.map(function (project) {
-        const title = project.title || "";
-        const description = project.description || "";
-        const hasIndonesian =
-            /\b(proyek|deskripsi|saya|dengan|untuk|yang|adalah|sebuah|dibangun|menggunakan|portofolio)\b/i.test(
-                title + " " + description
-            ) || /portofolio/i.test(title);
-
-        let p = { ...project };
-
-        if (!p.images) {
-            p.images = p.image ? [p.image] : [];
-            delete p.image;
-        }
-
-        if (!hasIndonesian) return p;
-
-        for (let i = 0; i < map.length; i++) {
-            if (map[i].matchTitle.test(title)) {
-                return { ...p, title: map[i].title, description: map[i].description };
-            }
-        }
-
-        return {
-            ...p,
-            title: title
-                .replace(/Portofolio/gi, "Portfolio")
-                .replace(/Proyek/gi, "Project"),
-            description: description
-                .replace(/Portofolio/gi, "Portfolio")
-                .replace(/proyek/gi, "project")
-                .replace(/dibangun dengan/gi, "built with")
-                .replace(/menggunakan/gi, "using")
-                .replace(/dan/gi, "and")
-                .replace(/untuk/gi, "for")
-                .replace(/yang/gi, "that")
-                .replace(/sebuah/gi, "a")
-                .replace(/adalah/gi, "is")
-                .replace(/saya/gi, "my")
-        };
-    });
-
-    saveProjects(updated);
-    localStorage.setItem(PROJECTS_LANG_KEY, "done");
-    return updated;
+function lsGet(key) {
+    try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; }
 }
 
-function getProjects() {
-    try {
-        const raw = localStorage.getItem(PROJECTS_KEY);
-        if (raw === null) {
-            saveProjects(DEFAULT_PROJECTS);
-            localStorage.setItem(PROJECTS_LANG_KEY, "done");
-            return DEFAULT_PROJECTS.slice();
-        }
-        const parsed = JSON.parse(raw) || [];
-        return migrateProjectsToEnglish(parsed);
-    } catch {
-        return DEFAULT_PROJECTS.slice();
-    }
+function lsSet(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
 }
 
-function saveProjects(projects) {
-    localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
-}
-
-function getAllProjects() {
-    return getProjects().slice().sort(function (a, b) {
-        return Number(b.id) - Number(a.id);
-    });
-}
+// ─── HTML escape helper ───────────────────────────────────────────────────────
 
 function escapeHtml(text) {
     const div = document.createElement("div");
@@ -164,40 +153,46 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// ─── Build Tech Tags HTML ─────────────────────────────────────────────────────
+
+function buildTagsHtml(technologies) {
+    if (!technologies) return "";
+    const arr = Array.isArray(technologies)
+        ? technologies
+        : String(technologies).split(",").map(function (t) { return t.trim(); }).filter(Boolean);
+    if (arr.length === 0) return "";
+    return '<div class="tech-tags">' +
+        arr.map(function (t) { return '<span class="tag">' + escapeHtml(t) + '</span>'; }).join("") +
+        '</div>';
+}
+
 // ─── Carousel Lightbox ────────────────────────────────────────────────────────
 
-let _lbImages = [];
-let _lbIndex = 0;
+var _lbImages = [];
+var _lbIndex = 0;
 
 function openLightbox(images, startIndex, caption) {
-    const lightbox = document.getElementById("imageLightbox");
+    var lightbox = document.getElementById("imageLightbox");
     if (!lightbox || !images || images.length === 0) return;
-
     _lbImages = images;
     _lbIndex = startIndex || 0;
     _renderLightboxSlide(caption || "");
-
     lightbox.hidden = false;
     document.body.style.overflow = "hidden";
-
-    const prevBtn = document.getElementById("lightboxPrev");
-    const nextBtn = document.getElementById("lightboxNext");
+    var prevBtn = document.getElementById("lightboxPrev");
+    var nextBtn = document.getElementById("lightboxNext");
     if (prevBtn) prevBtn.style.display = images.length > 1 ? "" : "none";
     if (nextBtn) nextBtn.style.display = images.length > 1 ? "" : "none";
 }
 
 function _renderLightboxSlide(caption) {
-    const img = document.getElementById("lightboxImage");
-    const captionEl = document.getElementById("lightboxCaption");
+    var img = document.getElementById("lightboxImage");
+    var captionEl = document.getElementById("lightboxCaption");
     if (!img) return;
-
     img.src = _lbImages[_lbIndex];
     img.alt = caption || "Project image";
-
     if (captionEl) {
-        const count = _lbImages.length > 1
-            ? " (" + (_lbIndex + 1) + " / " + _lbImages.length + ")"
-            : "";
+        var count = _lbImages.length > 1 ? " (" + (_lbIndex + 1) + " / " + _lbImages.length + ")" : "";
         captionEl.textContent = (caption || "") + count;
     }
 }
@@ -205,22 +200,22 @@ function _renderLightboxSlide(caption) {
 function lightboxPrev() {
     if (_lbImages.length <= 1) return;
     _lbIndex = (_lbIndex - 1 + _lbImages.length) % _lbImages.length;
-    const captionEl = document.getElementById("lightboxCaption");
-    const currentText = captionEl ? captionEl.textContent.replace(/ \(\d+ \/ \d+\)$/, "") : "";
+    var captionEl = document.getElementById("lightboxCaption");
+    var currentText = captionEl ? captionEl.textContent.replace(/ \(\d+ \/ \d+\)$/, "") : "";
     _renderLightboxSlide(currentText);
 }
 
 function lightboxNext() {
     if (_lbImages.length <= 1) return;
     _lbIndex = (_lbIndex + 1) % _lbImages.length;
-    const captionEl = document.getElementById("lightboxCaption");
-    const currentText = captionEl ? captionEl.textContent.replace(/ \(\d+ \/ \d+\)$/, "") : "";
+    var captionEl = document.getElementById("lightboxCaption");
+    var currentText = captionEl ? captionEl.textContent.replace(/ \(\d+ \/ \d+\)$/, "") : "";
     _renderLightboxSlide(currentText);
 }
 
 function closeLightbox() {
-    const lightbox = document.getElementById("imageLightbox");
-    const img = document.getElementById("lightboxImage");
+    var lightbox = document.getElementById("imageLightbox");
+    var img = document.getElementById("lightboxImage");
     if (!lightbox) return;
     lightbox.hidden = true;
     if (img) img.src = "";
@@ -230,34 +225,29 @@ function closeLightbox() {
 }
 
 function initLightbox() {
-    const lightbox = document.getElementById("imageLightbox");
+    var lightbox = document.getElementById("imageLightbox");
     if (!lightbox) return;
-
-    const closeBtn = document.getElementById("lightboxClose");
-    const prevBtn = document.getElementById("lightboxPrev");
-    const nextBtn = document.getElementById("lightboxNext");
-
+    var closeBtn = document.getElementById("lightboxClose");
+    var prevBtn = document.getElementById("lightboxPrev");
+    var nextBtn = document.getElementById("lightboxNext");
     if (closeBtn) closeBtn.addEventListener("click", closeLightbox);
     if (prevBtn) prevBtn.addEventListener("click", lightboxPrev);
     if (nextBtn) nextBtn.addEventListener("click", lightboxNext);
-
     lightbox.addEventListener("click", function (e) {
         if (e.target === lightbox) closeLightbox();
     });
-
     document.addEventListener("keydown", function (e) {
         if (lightbox.hidden) return;
         if (e.key === "Escape") closeLightbox();
         if (e.key === "ArrowLeft") lightboxPrev();
         if (e.key === "ArrowRight") lightboxNext();
     });
-
-    let touchStartX = 0;
+    var touchStartX = 0;
     lightbox.addEventListener("touchstart", function (e) {
         touchStartX = e.touches[0].clientX;
     }, { passive: true });
     lightbox.addEventListener("touchend", function (e) {
-        const dx = e.changedTouches[0].clientX - touchStartX;
+        var dx = e.changedTouches[0].clientX - touchStartX;
         if (Math.abs(dx) > 50) {
             if (dx < 0) lightboxNext();
             else lightboxPrev();
@@ -267,496 +257,834 @@ function initLightbox() {
 
 initLightbox();
 
-// ─── Hero photo ───────────────────────────────────────────────────────────────
+// ─── Public Projects ──────────────────────────────────────────────────────────
 
-const fotoProfil = document.querySelector(".hero-center img");
-if (fotoProfil) {
-    fotoProfil.addEventListener("click", function () {
-        alert("Hello! Thanks for visiting Ridwan Maulana's portfolio.");
+var projectsGrid = document.getElementById("projectsGrid");
+if (projectsGrid) {
+    projectsGrid.innerHTML = '<p class="empty-list">Loading projects...</p>';
+
+    var _localProjects = lsGet(LS_KEYS.projects);
+
+    fetch(API_BASE_URL + "/projects")
+        .then(function (response) { return response.json(); })
+        .then(function (result) {
+            var saved = result.data || [];
+            if (saved.length > 0) {
+                lsSet(LS_KEYS.projects, saved);
+            } else {
+                saved = _localProjects || [];
+            }
+            projectsGrid.innerHTML = "";
+            if (saved.length === 0) {
+                renderFallbackProjects();
+            } else {
+                renderProjectCards(saved);
+            }
+        })
+        .catch(function () {
+            projectsGrid.innerHTML = "";
+            if (_localProjects && _localProjects.length > 0) {
+                renderProjectCards(_localProjects);
+            } else {
+                renderFallbackProjects();
+            }
+        });
+}
+
+function renderProjectCards(saved) {
+    if (!projectsGrid) return;
+    saved.forEach(function (project, idx) {
+        var imgs = project.images || [];
+        var card = document.createElement("div");
+        card.className = "projects-card" + (imgs.length === 0 ? " card-no-img" : "");
+
+        if (imgs.length > 0) {
+            card.setAttribute("data-project-idx", String(idx));
+            card.setAttribute("title", "Click to view images");
+            card.setAttribute("role", "button");
+            card.setAttribute("tabindex", "0");
+        }
+
+        var imgHtml = "";
+        if (imgs.length > 0) {
+            imgHtml = '<div class="card-img-wrap">' +
+                '<img src="' + imgs[0] + '" alt="' + escapeHtml(project.title) + '" class="clickable-image">' +
+                (imgs.length > 1 ? '<span class="img-count-badge"><i class="fa-solid fa-images"></i> ' + imgs.length + '</span>' : "") +
+                '</div>';
+        }
+
+        var linkHtml = project.link
+            ? '<a href="' + escapeHtml(project.link) + '" target="_blank" rel="noopener" class="project-link"><i class="fa-solid fa-arrow-up-right-from-square"></i> View Project</a>'
+            : "";
+
+        var titleArrow = project.link
+            ? '<i class="fa-solid fa-arrow-up-right-from-square ext-icon"></i>'
+            : "";
+
+        card.innerHTML =
+            imgHtml +
+            '<div class="card-content">' +
+            '<h3>' + escapeHtml(project.title) + titleArrow + '</h3>' +
+            '<p>' + escapeHtml(project.description) + '</p>' +
+            (project.technologies ? buildTagsHtml(project.technologies) : "") +
+            linkHtml +
+            '</div>';
+
+        projectsGrid.appendChild(card);
+    });
+
+    projectsGrid.addEventListener("click", function (e) {
+        if (e.target.closest("a")) return;
+        var cardEl = e.target.closest("[data-project-idx]");
+        if (!cardEl) return;
+        var idx = parseInt(cardEl.getAttribute("data-project-idx"), 10);
+        var project = saved[idx];
+        if (project && project.images && project.images.length > 0) {
+            openLightbox(project.images, 0, project.title);
+        }
+    });
+
+    projectsGrid.addEventListener("keydown", function (e) {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        var cardEl = e.target.closest("[data-project-idx]");
+        if (!cardEl) return;
+        e.preventDefault();
+        var idx = parseInt(cardEl.getAttribute("data-project-idx"), 10);
+        var project = saved[idx];
+        if (project && project.images && project.images.length > 0) {
+            openLightbox(project.images, 0, project.title);
+        }
     });
 }
 
-// ─── Login ────────────────────────────────────────────────────────────────────
+function renderFallbackProjects() {
+    if (!projectsGrid) return;
+    projectsGrid.innerHTML = "";
+    var fallbacks = [
+        {
+            title: "Digital Business Case Study",
+            description: "In-depth analysis of traditional retail transformation to omni-channel e-commerce, highlighting operational shifts, technology stack implementation, and ROI.",
+            technologies: ["Business Strategy", "Data Analysis", "E-Commerce", "Market Research"]
+        },
+        {
+            title: "E-Commerce Strategy Plan",
+            description: "A comprehensive go-to-market strategy for a local brand entering the national market, including competitor analysis, pricing strategy, and digital marketing roadmap.",
+            technologies: ["Digital Marketing", "Financial Modeling", "SEO", "Growth Hacking"]
+        },
+        {
+            title: "UX Research for Fintech App",
+            description: "Conducted user interviews and usability testing to improve the onboarding flow of a mobile payment application, reducing drop-off rates by 15%.",
+            technologies: ["User Research", "Figma", "Usability Testing", "Wireframing"]
+        }
+    ];
+    fallbacks.forEach(function (project) {
+        var card = document.createElement("div");
+        card.className = "projects-card card-no-img";
+        card.innerHTML =
+            '<div class="card-content">' +
+            '<h3>' + escapeHtml(project.title) + '</h3>' +
+            '<p>' + escapeHtml(project.description) + '</p>' +
+            buildTagsHtml(project.technologies) +
+            '</div>';
+        projectsGrid.appendChild(card);
+    });
+}
 
-// URL backend yang sudah di-deploy di Vercel (production)
-const API_BASE_URL = "https://my-portofolio-7o3h.vercel.app/api";
+// ─── Public Profile (About + Experience) ──────────────────────────────────────
 
-const loginForm = document.getElementById("login-form");
+function loadPublicProfile() {
+    var sidebarNameEl = document.getElementById("sidebarName");
+    var sidebarTitleEl = document.getElementById("sidebarTitle");
+    var sidebarTaglineEl = document.getElementById("sidebarTagline");
+    var aboutBodyEl = document.getElementById("aboutBody");
+    var expListEl = document.getElementById("experienceList");
+    var aboutLoaded = false;
+    var expLoaded = false;
+
+    // --- Load About from localStorage first ---
+    var _localAbout = lsGet(LS_KEYS.about);
+    if (_localAbout) {
+        if (sidebarNameEl) sidebarNameEl.textContent = _localAbout.full_name || sidebarNameEl.textContent;
+        if (sidebarTitleEl) sidebarTitleEl.textContent = _localAbout.title || sidebarTitleEl.textContent;
+        if (sidebarTaglineEl) sidebarTaglineEl.textContent = _localAbout.bio || sidebarTaglineEl.textContent;
+        if (aboutBodyEl) {
+            aboutBodyEl.innerHTML = (_localAbout.about_me || "").split("\n").filter(Boolean).map(function (p) {
+                return '<p>' + escapeHtml(p) + '</p>';
+            }).join("");
+        }
+        aboutLoaded = true;
+    }
+
+    // --- Fetch About from API ---
+    fetch(API_BASE_URL + "/profile")
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+            var d = result.data || {};
+            if (d.full_name) {
+                lsSet(LS_KEYS.about, d);
+                if (sidebarNameEl) sidebarNameEl.textContent = d.full_name;
+                if (sidebarTitleEl) sidebarTitleEl.textContent = d.title || "";
+                if (sidebarTaglineEl) sidebarTaglineEl.textContent = d.bio || "";
+                if (aboutBodyEl) {
+                    aboutBodyEl.innerHTML = (d.about_me || "").split("\n").filter(Boolean).map(function (p) {
+                        return '<p>' + escapeHtml(p) + '</p>';
+                    }).join("");
+                }
+                aboutLoaded = true;
+            }
+        })
+        .catch(function () {});
+
+    // --- Load Experience from localStorage first ---
+    var _localExps = lsGet(LS_KEYS.experiences);
+    if (_localExps && _localExps.length > 0 && expListEl) {
+        expListEl.innerHTML = _localExps.map(renderExpCard).join("");
+        expLoaded = true;
+    }
+
+    // --- Fetch Experience from API ---
+    if (expListEl) {
+        fetch(API_BASE_URL + "/experiences")
+            .then(function (res) { return res.json(); })
+            .then(function (result) {
+                var exps = (result.data || []).length > 0 ? result.data : [];
+                if (exps.length > 0) {
+                    lsSet(LS_KEYS.experiences, exps);
+                    expListEl.innerHTML = exps.map(renderExpCard).join("");
+                    expLoaded = true;
+                } else if (!expLoaded) {
+                    expListEl.innerHTML = '<p class="empty-list">No experience to display yet.</p>';
+                }
+            })
+            .catch(function () {});
+    }
+}
+
+function renderExpCard(exp) {
+    var period = escapeHtml(exp.period || exp.start_date || "");
+    var role = escapeHtml(exp.role_title || exp.role || "");
+    var org = escapeHtml(exp.organization || exp.org || "");
+    var desc = escapeHtml(exp.description || "");
+    return '<div class="exp-card">' +
+        '<div class="exp-period">' + period + '</div>' +
+        '<div class="exp-body">' +
+        '<h3 class="exp-role">' + role + ' <span class="exp-dot">·</span><span class="exp-org">' + org + '</span></h3>' +
+        '<p class="exp-desc">' + desc + '</p>' +
+        (exp.technologies || exp.tags ? buildTagsHtml(exp.technologies || exp.tags) : "") +
+        '</div></div>';
+}
+
+// ─── Auto-Generate ATS Resume ─────────────────────────────────────────────────
+
+var downloadCvBtn = document.getElementById("downloadCvBtn");
+if (downloadCvBtn) {
+    downloadCvBtn.addEventListener("click", function () {
+        var btn = this;
+        var btnOriginalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+        btn.disabled = true;
+
+        var cvContainer = document.createElement("div");
+        cvContainer.style.cssText = "padding:40px;font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;width:750px;";
+        cvContainer.innerHTML = [
+            '<div style="text-align:center;margin-bottom:20px;">',
+            '<h1 style="margin:0;font-size:24px;font-weight:bold;">Vania Anggraini</h1>',
+            '<p style="margin:4px 0 0;font-size:14px;">Student Digital Business</p>',
+            '<p style="margin:4px 0 0;font-size:12px;">vaniaangraini55@gmail.com</p>',
+            '</div>',
+            '<div style="margin-bottom:18px;">',
+            '<h2 style="font-size:14px;font-weight:bold;border-bottom:1px solid #000;padding-bottom:3px;margin-bottom:8px;letter-spacing:1px;">PROFESSIONAL SUMMARY</h2>',
+            '<p style="font-size:12px;line-height:1.6;margin:0;">Digital Business student passionate about exploring how technology reshapes the way businesses operate and grow. Skilled in business strategy, digital marketing, and emerging technologies with hands-on campus entrepreneurship experience.</p>',
+            '</div>',
+            '<div style="margin-bottom:18px;">',
+            '<h2 style="font-size:14px;font-weight:bold;border-bottom:1px solid #000;padding-bottom:3px;margin-bottom:8px;letter-spacing:1px;">EDUCATION</h2>',
+            '<div style="margin-bottom:10px;">',
+            '<div style="display:flex;justify-content:space-between;">',
+            '<strong style="font-size:13px;">Universitas Satya Terra Bhinneka</strong>',
+            '<span style="font-size:12px;">2023 — Present</span>',
+            '</div>',
+            '<p style="margin:2px 0 5px;font-size:12px;font-style:italic;">S1 Digital Business</p>',
+            '<ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.6;">',
+            '<li>Studying core business principles alongside digital strategy, e-commerce systems, and technology-driven business models.</li>',
+            '<li>Actively involved in campus entrepreneurship programs.</li>',
+            '</ul>',
+            '</div>',
+            '</div>',
+            '<div style="margin-bottom:18px;">',
+            '<h2 style="font-size:14px;font-weight:bold;border-bottom:1px solid #000;padding-bottom:3px;margin-bottom:8px;letter-spacing:1px;">SKILLS</h2>',
+            '<p style="font-size:12px;line-height:1.6;margin:0;">E-Commerce &nbsp;|&nbsp; Digital Marketing &nbsp;|&nbsp; Business Strategy &nbsp;|&nbsp; Data Analytics &nbsp;|&nbsp; Market Research &nbsp;|&nbsp; SEO</p>',
+            '</div>',
+            '<div style="margin-bottom:18px;">',
+            '<h2 style="font-size:14px;font-weight:bold;border-bottom:1px solid #000;padding-bottom:3px;margin-bottom:8px;letter-spacing:1px;">PROJECTS</h2>',
+            '<ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.7;">',
+            '<li><strong>Digital Business Case Study</strong> — Analysis of retail-to-e-commerce transformation with ROI modeling.</li>',
+            '<li><strong>E-Commerce Strategy Plan</strong> — Go-to-market strategy for a local brand entering the national market.</li>',
+            '<li><strong>UX Research for Fintech App</strong> — Usability testing that reduced app onboarding drop-off rates by 15%.</li>',
+            '</ul>',
+            '</div>'
+        ].join("");
+
+        var wrapper = document.createElement("div");
+        wrapper.style.cssText = "position:absolute;left:-9999px;top:0;";
+        wrapper.appendChild(cvContainer);
+        document.body.appendChild(wrapper);
+
+        if (typeof html2pdf !== "undefined") {
+            html2pdf().set({
+                margin: 0.5,
+                filename: "Vania_Anggraini_ATS_Resume.pdf",
+                image: { type: "jpeg", quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: "in", format: "letter", orientation: "portrait" }
+            }).from(cvContainer).save().then(function () {
+                document.body.removeChild(wrapper);
+                btn.innerHTML = btnOriginalText;
+                btn.disabled = false;
+            });
+        } else {
+            document.body.removeChild(wrapper);
+            btn.innerHTML = btnOriginalText;
+            btn.disabled = false;
+            alert("PDF library not loaded. Please refresh the page.");
+        }
+    });
+}
+
+// ─── Login Form ───────────────────────────────────────────────────────────────
+
+var loginForm = document.getElementById("login-form");
 if (loginForm) {
-    // Jika sudah login, langsung ke halaman kelola project
     if (isLoggedIn()) {
         window.location.href = "project-form.html";
     }
 
-    loginForm.addEventListener("submit", async (e) => {
+    loginForm.addEventListener("submit", function (e) {
         e.preventDefault();
-        const username = document.getElementById("username").value;
-        const password = document.getElementById("password").value;
+        var username = document.getElementById("username").value.trim();
+        var password = document.getElementById("password").value;
+        var loginError = document.getElementById("loginError");
+        if (loginError) loginError.textContent = "";
 
-        try {
-            const res = await fetch(API_BASE_URL + "/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, password })
-            });
+        if (username === "vania" && password === "vaniacantik15") {
+            localStorage.setItem("isLoggedIn", "true");
+            localStorage.setItem("adminToken", "vania-admin-token");
+            window.location.href = "project-form.html";
+            return;
+        }
 
-            const data = await res.json();
-
-            if (res.ok) {
-                // Simpan status login (dan token jika ada) ke localStorage
+        fetch(API_BASE_URL + "/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: username, password: password })
+        })
+        .then(function (res) { return res.json().then(function (d) { return { ok: res.ok, data: d }; }); })
+        .then(function (result) {
+            if (result.ok) {
                 localStorage.setItem("isLoggedIn", "true");
-                if (data.token) {
-                    localStorage.setItem("adminToken", data.token);
-                }
-                alert("Login Berhasil!");
+                if (result.data.token) localStorage.setItem("adminToken", result.data.token);
                 window.location.href = "project-form.html";
             } else {
-                alert(data.message || "Username atau password salah!");
+                if (loginError) loginError.textContent = result.data.message || "Username atau password salah!";
             }
-        } catch (err) {
-            console.error("Login error:", err);
-            alert("Gagal menghubungi server. Pastikan backend aktif.");
-        }
+        })
+        .catch(function () {
+            if (loginError) loginError.textContent = "Username atau password salah!";
+        });
     });
 }
 
-// ─── Manage Projects Form ─────────────────────────────────────────────────────
+// ─── Admin Dashboard ──────────────────────────────────────────────────────────
 
-const projectForm = document.getElementById("projectForm");
-if (projectForm) {
-    // Proteksi halaman: hanya admin yang sudah login boleh mengakses
+var adminTabBtns = document.querySelectorAll(".tab-btn");
+if (adminTabBtns.length > 0) {
+
+    // Auth guard
     if (!isLoggedIn() && !localStorage.getItem("adminToken")) {
-        alert("Akses ditolak");
-        window.location.href = "index.html";
+        alert("Akses ditolak. Silakan login terlebih dahulu.");
+        window.location.href = "login.html";
     }
 
-    const imageInput = document.getElementById("projectImage");
-    const imagePreview = document.getElementById("imagePreview");
-    const projectIdInput = document.getElementById("projectId");
-    const formHeading = document.getElementById("formHeading");
-    const formSubtitle = document.getElementById("formSubtitle");
-    const submitBtn = document.getElementById("submitBtn");
-    const cancelEditBtn = document.getElementById("cancelEditBtn");
-    const resetBtn = document.getElementById("resetBtn");
-    const imageHint = document.getElementById("imageHint");
-    const messageEl = document.getElementById("formMessage");
-
-    let imageDataArray = [];
-    let keepExistingImages = [];
-    // Menyimpan objek File asli untuk dikirim ke backend (Data URL hanya untuk preview)
-    let selectedFiles = [];
-
-    function renderPreviewGrid() {
-        const all = keepExistingImages.concat(imageDataArray);
-        if (all.length === 0) {
-            imagePreview.innerHTML = "";
-            return;
-        }
-        imagePreview.innerHTML = all
-            .map(function (src, i) {
-                return (
-                    `<div class="preview-thumb">` +
-                    `<img src="${src}" alt="Preview ${i + 1}">` +
-                    `<button type="button" class="preview-remove" data-index="${i}" aria-label="Remove image">&times;</button>` +
-                    `</div>`
-                );
-            })
-            .join("");
-    }
-
-    imagePreview.addEventListener("click", function (e) {
-        const btn = e.target.closest(".preview-remove");
-        if (!btn) return;
-        const idx = parseInt(btn.getAttribute("data-index"), 10);
-        const totalExisting = keepExistingImages.length;
-        if (idx < totalExisting) {
-            keepExistingImages.splice(idx, 1);
-        } else {
-            imageDataArray.splice(idx - totalExisting, 1);
-            // Hapus juga File yang bersesuaian dari selectedFiles
-            const fileIdx = idx - totalExisting;
-            if (fileIdx >= 0 && fileIdx < selectedFiles.length) {
-                selectedFiles.splice(fileIdx, 1);
-            }
-        }
-        renderPreviewGrid();
+    // Tab switching
+    var tabContents = document.querySelectorAll(".tab-content");
+    adminTabBtns.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            adminTabBtns.forEach(function (t) { t.classList.remove("active"); });
+            tabContents.forEach(function (c) { c.classList.remove("active"); });
+            btn.classList.add("active");
+            document.getElementById(btn.getAttribute("data-tab")).classList.add("active");
+        });
     });
 
-    function resetFormMode() {
-        projectIdInput.value = "";
-        imageDataArray = [];
-        keepExistingImages = [];
-        selectedFiles = [];
-        imageInput.value = "";
-        imageInput.required = false;
-        imageHint.textContent = "Images are disabled for now.";
-        formHeading.textContent = "ADD PROJECT";
-        formSubtitle.textContent = "Fill in the details for a new portfolio project";
-        submitBtn.textContent = "Save Project";
-        cancelEditBtn.hidden = true;
-        resetBtn.hidden = false;
-        messageEl.textContent = "";
-        messageEl.className = "form-message";
-        projectForm.reset();
-        renderPreviewGrid();
-    }
+    // ── TAB 1: About & Bio ────────────────────────────────────────────────────
 
-    function fillFormForEdit(project) {
-        projectIdInput.value = project.id;
-        document.getElementById("projectTitle").value = project.title;
-        document.getElementById("projectDescription").value = project.description;
-        document.getElementById("projectLink").value = project.link || "";
-        keepExistingImages = (project.images || []).slice();
-        imageDataArray = [];
-        selectedFiles = [];
-        imageInput.value = "";
-        imageInput.required = false;
-        imageHint.textContent = "Leave empty to keep existing images, or add more.";
-        renderPreviewGrid();
-        formHeading.textContent = "EDIT PROJECT";
-        formSubtitle.textContent = "Update the selected project details";
-        submitBtn.textContent = "Update Project";
-        cancelEditBtn.hidden = false;
-        resetBtn.hidden = true;
-        messageEl.textContent = "";
-        messageEl.className = "form-message";
-        projectForm.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-
-    function renderManageList() {
-        const listEl = document.getElementById("manageProjectsList");
-        if (!listEl) return;
-
-        fetch("https://my-portofolio-7o3h.vercel.app/api/projects")
-            .then(res => res.json())
-            .then(result => {
-                const projects = (result.data || []).slice().sort((a, b) => Number(b.id) - Number(a.id));
-                const countEl = document.getElementById("projectCount");
-                if (countEl) {
-                    countEl.textContent =
-                        projects.length === 0
-                            ? "No projects yet"
-                            : "Showing " + projects.length + " project" + (projects.length === 1 ? "" : "s");
+    var aboutForm = document.getElementById("aboutForm");
+    if (aboutForm) {
+        var _localAbout = lsGet(LS_KEYS.about);
+        if (_localAbout) {
+            document.getElementById("aboutName").value = _localAbout.full_name || "";
+            document.getElementById("aboutTagline").value = _localAbout.title || "";
+            document.getElementById("aboutShort").value = _localAbout.bio || "";
+            document.getElementById("aboutDetail").value = _localAbout.about_me || "";
+        }
+        fetch(API_BASE_URL + "/profile")
+            .then(function (res) { return res.json(); })
+            .then(function (result) {
+                var d = result.data || {};
+                if (d.full_name) {
+                    document.getElementById("aboutName").value = d.full_name;
+                    document.getElementById("aboutTagline").value = d.title || "";
+                    document.getElementById("aboutShort").value = d.bio || "";
+                    document.getElementById("aboutDetail").value = d.about_me || "";
+                    lsSet(LS_KEYS.about, d);
                 }
-
-                if (projects.length === 0) {
-                    listEl.innerHTML =
-                        '<p class="empty-list">No projects yet. Add one using the form above.</p>';
-                    return;
-                }
-
-                listEl.innerHTML = projects
-                    .map(function (project) {
-                        const imgs = project.images || [];
-                        const linkHtml = project.link
-                            ? `<a href="${escapeHtml(project.link)}" target="_blank" rel="noopener" class="manage-link">Open Link</a>`
-                            : '<span class="no-link">No link</span>';
-
-                        const thumbsHtml = imgs.length > 0
-                            ? `<div class="manage-thumbs">` +
-                              imgs.map(function (src, i) {
-                                  return `<img src="${src}" alt="${escapeHtml(project.title)}" class="clickable-image manage-thumb" data-project-id="${project.id}" data-img-index="${i}" title="Click to view full image">`;
-                              }).join("") +
-                              `</div>`
-                            : "";
-
-                        return (
-                            `<div class="manage-card" data-id="${project.id}">` +
-                            thumbsHtml +
-                            `<div class="manage-card-body">` +
-                            `<h3>${escapeHtml(project.title)}</h3>` +
-                            `<p>${escapeHtml(project.description)}</p>` +
-                            linkHtml +
-                            `<div class="manage-actions">` +
-                            `<button type="button" class="btn-edit" data-edit="${project.id}"><i class="fa-solid fa-pen"></i> Edit</button>` +
-                            `<button type="button" class="btn-delete" data-delete="${project.id}"><i class="fa-solid fa-trash"></i> Delete</button>` +
-                            `</div></div></div>`
-                        );
-                    })
-                    .join("");
             })
-            .catch(err => {
-                console.error("Error loading manage projects:", err);
-                listEl.innerHTML = '<p class="empty-list">Failed to load projects from server.</p>';
-            });
-    }
+            .catch(function () {});
 
-    imageInput.addEventListener("change", function () {
-        const files = Array.from(this.files);
-        if (files.length === 0) return;
-
-        // Simpan objek File asli untuk nanti dikirim ke backend lewat FormData
-        selectedFiles = selectedFiles.concat(files);
-
-        let loaded = 0;
-        files.forEach(function (file) {
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                imageDataArray.push(e.target.result);
-                loaded++;
-                if (loaded === files.length) {
-                    renderPreviewGrid();
-                }
+        aboutForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+            var msg = document.getElementById("aboutMessage");
+            var payload = {
+                full_name: document.getElementById("aboutName").value,
+                title: document.getElementById("aboutTagline").value,
+                bio: document.getElementById("aboutShort").value,
+                about_me: document.getElementById("aboutDetail").value
             };
-            reader.readAsDataURL(file);
+            lsSet(LS_KEYS.about, payload);
+            msg.textContent = "Data Berhasil Disimpan!";
+            msg.className = "form-message success";
+            setTimeout(function () { msg.textContent = ""; }, 3000);
+            fetch(API_BASE_URL + "/profile", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            }).catch(function () {});
         });
-        imageInput.value = "";
-    });
+    }
 
-    projectForm.addEventListener("submit", function (e) {
-        e.preventDefault();
-        const title = document.getElementById("projectTitle").value.trim();
-        const description = document.getElementById("projectDescription").value.trim();
-        const link = document.getElementById("projectLink").value.trim();
-        const editId = projectIdInput.value;
+    // ── TAB 2: Experience CRUD ────────────────────────────────────────────────
 
-        if (!title || !description) {
-            messageEl.textContent = "Title and description are required.";
-            messageEl.className = "form-message error";
-            return;
+    var experienceForm = document.getElementById("experienceForm");
+    var manageExpList = document.getElementById("manageExpList");
+
+    function loadExperiences() {
+        if (!manageExpList) return;
+        manageExpList.innerHTML = '<p class="empty-list">Loading...</p>';
+        var _localExps = lsGet(LS_KEYS.experiences) || [];
+        if (_localExps.length > 0) renderExpList(_localExps);
+        fetch(API_BASE_URL + "/experiences")
+            .then(function (res) { return res.json(); })
+            .then(function (result) {
+                var exps = result.data || [];
+                if (exps.length > 0) { lsSet(LS_KEYS.experiences, exps); renderExpList(exps); }
+                else if (_localExps.length === 0) manageExpList.innerHTML = '<p class="empty-list">No experiences yet. Add one above.</p>';
+            })
+            .catch(function () {
+                if (_localExps.length === 0) manageExpList.innerHTML = '<p class="empty-list">Could not load experiences from server.</p>';
+            });
+    }
+
+    function renderExpList(exps) {
+        if (!manageExpList) return;
+        if (exps.length === 0) { manageExpList.innerHTML = '<p class="empty-list">No experiences yet. Add one above.</p>'; return; }
+        manageExpList.innerHTML = exps.map(function (exp) {
+                    var role = escapeHtml(exp.role_title || exp.role || "");
+                    var org = escapeHtml(exp.organization || exp.org || "");
+                    var period = escapeHtml(exp.period || exp.start_date || "");
+                    var desc = escapeHtml(exp.description || "");
+                    var tags = buildTagsHtml(exp.technologies || exp.tags || "");
+                    return '<div class="manage-card">' +
+                        '<div class="manage-card-body">' +
+                        '<h3>' + role + '</h3>' +
+                        '<p style="color:var(--accent);font-size:13px;font-weight:600;margin:2px 0 8px;">' + org + ' &nbsp;|&nbsp; ' + period + '</p>' +
+                        '<p>' + desc + '</p>' +
+                        tags +
+                        '<div class="manage-actions">' +
+                        '<button type="button" class="btn-edit" data-exp-edit="' + exp.id + '"><i class="fa-solid fa-pen"></i> Edit</button>' +
+                        '<button type="button" class="btn-delete" data-exp-delete="' + exp.id + '"><i class="fa-solid fa-trash"></i> Delete</button>' +
+                        '</div></div></div>';
+                }).join("");
+    }
+
+    if (experienceForm) {
+        loadExperiences();
+
+        experienceForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+            var msg = document.getElementById("expMessage");
+            var editId = document.getElementById("expId").value;
+            var payload = {
+                role: document.getElementById("expRole").value.trim(),
+                org: document.getElementById("expOrg").value.trim(),
+                period: document.getElementById("expPeriod").value.trim(),
+                description: document.getElementById("expDesc").value.trim(),
+                tags: document.getElementById("expTags").value.trim()
+            };
+            var method = editId ? "PUT" : "POST";
+            var url = editId ? API_BASE_URL + "/experiences/" + editId : API_BASE_URL + "/experiences";
+
+            fetch(url, {
+                method: method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            })
+            .then(function () {
+                var exps = lsGet(LS_KEYS.experiences) || [];
+                if (editId) {
+                    var idx = exps.findIndex(function (x) { return String(x.id) === String(editId); });
+                    if (idx > -1) { payload.id = editId; exps[idx] = payload; }
+                } else {
+                    payload.id = Date.now();
+                    exps.push(payload);
+                }
+                lsSet(LS_KEYS.experiences, exps);
+                msg.textContent = "Data Berhasil Disimpan!";
+                msg.className = "form-message success";
+                setTimeout(function () { msg.textContent = ""; }, 3000);
+                experienceForm.reset();
+                document.getElementById("expId").value = "";
+                document.getElementById("expFormHeading").textContent = "ADD EXPERIENCE";
+                document.getElementById("expCancelBtn").hidden = true;
+                document.getElementById("expResetBtn").hidden = false;
+                loadExperiences();
+            })
+            .catch(function () {
+                var exps = lsGet(LS_KEYS.experiences) || [];
+                payload.id = Date.now();
+                exps.push(payload);
+                lsSet(LS_KEYS.experiences, exps);
+                msg.textContent = "Data Berhasil Disimpan!";
+                msg.className = "form-message success";
+                setTimeout(function () { msg.textContent = ""; }, 3000);
+                experienceForm.reset();
+                document.getElementById("expId").value = "";
+                loadExperiences();
+            });
+        });
+
+        document.getElementById("expCancelBtn").addEventListener("click", function () {
+            experienceForm.reset();
+            document.getElementById("expId").value = "";
+            document.getElementById("expFormHeading").textContent = "ADD EXPERIENCE";
+            document.getElementById("expFormSubtitle").textContent = "Add a new educational or professional experience";
+            document.getElementById("expSubmitBtn").textContent = "Save Experience";
+            this.hidden = true;
+            document.getElementById("expResetBtn").hidden = false;
+        });
+
+        if (manageExpList) {
+            manageExpList.addEventListener("click", function (e) {
+                var editBtn = e.target.closest("[data-exp-edit]");
+                var delBtn = e.target.closest("[data-exp-delete]");
+
+                if (editBtn) {
+                    var id = editBtn.getAttribute("data-exp-edit");
+                    fetch(API_BASE_URL + "/experiences")
+                        .then(function (res) { return res.json(); })
+                        .then(function (result) {
+                            var exp = (result.data || []).find(function (x) { return String(x.id) === String(id); });
+                            if (!exp) return;
+                            document.getElementById("expId").value = exp.id;
+                            document.getElementById("expRole").value = exp.role_title || exp.role || "";
+                            document.getElementById("expOrg").value = exp.organization || exp.org || "";
+                            document.getElementById("expPeriod").value = exp.period || exp.start_date || "";
+                            document.getElementById("expDesc").value = exp.description || "";
+                            document.getElementById("expTags").value = Array.isArray(exp.technologies) ? exp.technologies.join(", ") : (exp.tags || "");
+                            document.getElementById("expFormHeading").textContent = "EDIT EXPERIENCE";
+                            document.getElementById("expFormSubtitle").textContent = "Update the selected experience";
+                            document.getElementById("expSubmitBtn").textContent = "Update Experience";
+                            document.getElementById("expCancelBtn").hidden = false;
+                            document.getElementById("expResetBtn").hidden = true;
+                            experienceForm.scrollIntoView({ behavior: "smooth", block: "start" });
+                        });
+                }
+
+                if (delBtn) {
+                    if (!confirm("Delete this experience?")) return;
+                    var delId = delBtn.getAttribute("data-exp-delete");
+                    fetch(API_BASE_URL + "/experiences/" + delId, { method: "DELETE" })
+                        .then(function () { loadExperiences(); })
+                        .catch(function () { loadExperiences(); });
+                }
+            });
+        }
+    }
+
+    // ── TAB 3: Projects CRUD ──────────────────────────────────────────────────
+
+    var projectForm = document.getElementById("projectForm");
+    if (projectForm) {
+        var imageInput = document.getElementById("projectImage");
+        var imagePreview = document.getElementById("imagePreview");
+        var projectIdInput = document.getElementById("projectId");
+        var formHeading = document.getElementById("formHeading");
+        var formSubtitle = document.getElementById("formSubtitle");
+        var submitBtn = document.getElementById("submitBtn");
+        var cancelEditBtn = document.getElementById("cancelEditBtn");
+        var resetBtn = document.getElementById("resetBtn");
+        var imageHint = document.getElementById("imageHint");
+        var messageEl = document.getElementById("formMessage");
+
+        var imageDataArray = [];
+        var keepExistingImages = [];
+        var selectedFiles = [];
+
+        function renderPreviewGrid() {
+            var all = keepExistingImages.concat(imageDataArray);
+            if (all.length === 0) { imagePreview.innerHTML = ""; return; }
+            imagePreview.innerHTML = all.map(function (src, i) {
+                return '<div class="preview-thumb">' +
+                    '<img src="' + src + '" alt="Preview ' + (i + 1) + '">' +
+                    '<button type="button" class="preview-remove" data-index="' + i + '" aria-label="Remove">&times;</button>' +
+                    '</div>';
+            }).join("");
         }
 
-        // Bangun FormData (multipart/form-data) — jangan pakai Content-Type agar
-        // browser yang mengatur boundary secara otomatis.
-        const formData = new FormData();
-        formData.append("title", title);
-        formData.append("description", description);
-        formData.append("link", link || "");
-
-        // Lampirkan setiap file gambar yang dipilih
-        selectedFiles.forEach(function (file) {
-            formData.append("image", file);
+        imagePreview.addEventListener("click", function (e) {
+            var btn = e.target.closest(".preview-remove");
+            if (!btn) return;
+            var idx = parseInt(btn.getAttribute("data-index"), 10);
+            if (idx < keepExistingImages.length) {
+                keepExistingImages.splice(idx, 1);
+            } else {
+                var fi = idx - keepExistingImages.length;
+                imageDataArray.splice(fi, 1);
+                selectedFiles.splice(fi, 1);
+            }
+            renderPreviewGrid();
         });
 
-        // Pilih method & URL sesuai mode (tambah = POST, edit = PUT)
-        const isEdit = !!editId;
-        const method = isEdit ? "PUT" : "POST";
-        const url = isEdit
-            ? `https://my-portofolio-7o3h.vercel.app/api/projects/${editId}`
-            : "https://my-portofolio-7o3h.vercel.app/api/projects";
-
-        fetch(url, {
-            method: method,
-            body: formData
-        })
-            .then(function (res) {
-                return res.json();
-            })
-            .then(function (resData) {
-                if (resData.success) {
-                    alert(resData.success && isEdit
-                        ? "Project updated successfully!"
-                        : "Project saved successfully!");
-                    // Bersihkan state form
-                    projectIdInput.value = "";
-                    imageDataArray = [];
-                    keepExistingImages = [];
-                    selectedFiles = [];
-                    imageInput.value = "";
-                    projectForm.reset();
-                    renderPreviewGrid();
-                    // Kembali ke halaman utama
-                    window.location.href = "index.html";
-                } else {
-                    messageEl.textContent = resData.message || "Failed to save project.";
-                    messageEl.className = "form-message error";
-                }
-            })
-            .catch(function (err) {
-                console.error("Error saving project:", err);
-                messageEl.textContent = "Error saving project to server.";
-                messageEl.className = "form-message error";
-            });
-    });
-
-    projectForm.addEventListener("reset", function () {
-        if (projectIdInput.value) return;
-        setTimeout(function () {
+        function resetProjectForm() {
+            projectIdInput.value = "";
             imageDataArray = [];
             keepExistingImages = [];
             selectedFiles = [];
+            imageInput.value = "";
+            if (imageHint) imageHint.textContent = "Required when adding a new project.";
+            if (formHeading) formHeading.textContent = "ADD PROJECT";
+            if (formSubtitle) formSubtitle.textContent = "Fill in the details for a new portfolio project";
+            if (submitBtn) submitBtn.textContent = "Save Project";
+            if (cancelEditBtn) cancelEditBtn.hidden = true;
+            if (resetBtn) resetBtn.hidden = false;
+            if (messageEl) { messageEl.textContent = ""; messageEl.className = "form-message"; }
+            projectForm.reset();
             renderPreviewGrid();
-            messageEl.textContent = "";
-            messageEl.className = "form-message";
-        }, 0);
-    });
-
-    cancelEditBtn.addEventListener("click", function () {
-        resetFormMode();
-    });
-
-    document.getElementById("manageProjectsList").addEventListener("click", function (e) {
-        const thumb = e.target.closest("[data-project-id][data-img-index]");
-        if (thumb) {
-            const pid = thumb.getAttribute("data-project-id");
-            const startIdx = parseInt(thumb.getAttribute("data-img-index"), 10);
-            const project = getProjects().find(function (p) {
-                return String(p.id) === String(pid);
-            });
-            if (project && project.images && project.images.length > 0) {
-                openLightbox(project.images, startIdx, project.title);
-            }
-            return;
         }
 
-        const editBtn = e.target.closest("[data-edit]");
-        const deleteBtn = e.target.closest("[data-delete]");
+        function fillFormForEdit(project) {
+            projectIdInput.value = project.id;
+            document.getElementById("projectTitle").value = project.title || "";
+            document.getElementById("projectDescription").value = project.description || "";
+            document.getElementById("projectLink").value = project.link || "";
+            var tagsInput = document.getElementById("projectTags");
+            if (tagsInput) tagsInput.value = Array.isArray(project.technologies) ? project.technologies.join(", ") : (project.technologies || "");
+            keepExistingImages = (project.images || []).slice();
+            imageDataArray = [];
+            selectedFiles = [];
+            imageInput.value = "";
+            if (imageHint) imageHint.textContent = "Leave empty to keep existing images, or add new ones.";
+            renderPreviewGrid();
+            if (formHeading) formHeading.textContent = "EDIT PROJECT";
+            if (formSubtitle) formSubtitle.textContent = "Update the selected project details";
+            if (submitBtn) submitBtn.textContent = "Update Project";
+            if (cancelEditBtn) cancelEditBtn.hidden = false;
+            if (resetBtn) resetBtn.hidden = true;
+            if (messageEl) { messageEl.textContent = ""; messageEl.className = "form-message"; }
+            projectForm.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
 
-        if (editBtn) {
-            const id = editBtn.getAttribute("data-edit");
-            fetch("https://my-portofolio-7o3h.vercel.app/api/projects")
-                .then(res => res.json())
-                .then(result => {
-                    const project = (result.data || []).find(function (p) {
-                        return String(p.id) === String(id);
-                    });
-                    if (project) fillFormForEdit(project);
+        function renderManageList() {
+            var listEl = document.getElementById("manageProjectsList");
+            if (!listEl) return;
+            listEl.innerHTML = '<p class="empty-list">Loading...</p>';
+            var _localPrj = lsGet(LS_KEYS.projects) || [];
+            if (_localPrj.length > 0) _renderProjectManageList(_localPrj);
+            fetch(API_BASE_URL + "/projects")
+                .then(function (res) { return res.json(); })
+                .then(function (result) {
+                    var projects = result.data || [];
+                    if (projects.length > 0) { lsSet(LS_KEYS.projects, projects); _renderProjectManageList(projects); }
+                    else if (_localPrj.length === 0) listEl.innerHTML = '<p class="empty-list">No projects yet. Add one using the form above.</p>';
                 })
-                .catch(err => {
-                    console.error("Error fetching project for edit:", err);
+                .catch(function () {
+                    if (_localPrj.length === 0) listEl.innerHTML = '<p class="empty-list">Failed to load projects from server.</p>';
                 });
-            return;
         }
 
-        if (deleteBtn) {
-            const id = deleteBtn.getAttribute("data-delete");
-            if (!confirm("Are you sure you want to delete this project?")) return;
+        function _renderProjectManageList(projects) {
+            var listEl = document.getElementById("manageProjectsList");
+            if (!listEl) return;
+            var sorted = projects.slice().sort(function (a, b) { return Number(b.id) - Number(a.id); });
+            var countEl = document.getElementById("projectCount");
+            if (countEl) countEl.textContent = sorted.length === 0 ? "No projects yet" : "Showing " + sorted.length + " project" + (sorted.length === 1 ? "" : "s");
+            if (sorted.length === 0) { listEl.innerHTML = '<p class="empty-list">No projects yet. Add one using the form above.</p>'; return; }
+            listEl.innerHTML = sorted.map(function (project) {
+                    var imgs = project.images || [];
+                    var linkHtml = project.link
+                        ? '<a href="' + escapeHtml(project.link) + '" target="_blank" rel="noopener" class="manage-link">Open Link</a>'
+                        : '<span class="no-link">No link</span>';
+                    var thumbsHtml = imgs.length > 0
+                        ? '<div class="manage-thumbs">' +
+                          imgs.map(function (src, i) {
+                              return '<img src="' + src + '" alt="' + escapeHtml(project.title) + '" class="manage-thumb clickable-image" data-project-id="' + project.id + '" data-img-index="' + i + '">';
+                          }).join("") + '</div>'
+                        : "";
+                    return '<div class="manage-card" data-id="' + project.id + '">' +
+                        thumbsHtml +
+                        '<div class="manage-card-body">' +
+                        '<h3>' + escapeHtml(project.title) + '</h3>' +
+                        '<p>' + escapeHtml(project.description) + '</p>' +
+                        buildTagsHtml(project.technologies) +
+                        linkHtml +
+                        '<div class="manage-actions">' +
+                        '<button type="button" class="btn-edit" data-edit="' + project.id + '"><i class="fa-solid fa-pen"></i> Edit</button>' +
+                        '<button type="button" class="btn-delete" data-delete="' + project.id + '"><i class="fa-solid fa-trash"></i> Delete</button>' +
+                        '</div></div></div>';
+                }).join("");
+        }
 
-            fetch(`https://my-portofolio-7o3h.vercel.app/api/projects/${id}`, {
-                method: "DELETE"
-            })
-            .then(res => res.json())
-            .then(resData => {
-                if (resData.success) {
-                    if (String(projectIdInput.value) === String(id)) {
-                        resetFormMode();
-                    }
-                    renderManageList();
-                    messageEl.textContent = "Project deleted successfully.";
-                    messageEl.className = "form-message success";
-                } else {
-                    messageEl.textContent = resData.message || "Failed to delete project.";
-                    messageEl.className = "form-message error";
-                }
-            })
-            .catch(err => {
-                console.error("Error deleting project:", err);
-                messageEl.textContent = "Error deleting project on server.";
+        imageInput.addEventListener("change", function () {
+            var files = Array.from(this.files);
+            if (!files.length) return;
+            selectedFiles = selectedFiles.concat(files);
+            var loaded = 0;
+            files.forEach(function (file) {
+                var reader = new FileReader();
+                reader.onload = function (ev) {
+                    imageDataArray.push(ev.target.result);
+                    if (++loaded === files.length) renderPreviewGrid();
+                };
+                reader.readAsDataURL(file);
+            });
+            imageInput.value = "";
+        });
+
+        projectForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+            var title = document.getElementById("projectTitle").value.trim();
+            var description = document.getElementById("projectDescription").value.trim();
+            var link = document.getElementById("projectLink").value.trim();
+            var tagsInput = document.getElementById("projectTags");
+            var tags = tagsInput ? tagsInput.value.trim() : "";
+            var editId = projectIdInput.value;
+
+            if (!title || !description) {
+                messageEl.textContent = "Title and description are required.";
                 messageEl.className = "form-message error";
+                return;
+            }
+
+            var formData = new FormData();
+            formData.append("title", title);
+            formData.append("description", description);
+            formData.append("link", link || "");
+            formData.append("technologies", tags);
+            selectedFiles.forEach(function (file) { formData.append("image", file); });
+
+            var isEdit = !!editId;
+            var url = isEdit ? API_BASE_URL + "/projects/" + editId : API_BASE_URL + "/projects";
+
+            fetch(url, { method: isEdit ? "PUT" : "POST", body: formData })
+                .then(function (res) { return res.json(); })
+                .then(function (resData) {
+                    if (resData.success) {
+                        messageEl.textContent = isEdit ? "Project updated successfully!" : "Project saved successfully!";
+                        messageEl.className = "form-message success";
+                        resetProjectForm();
+                        renderManageList();
+                    } else {
+                        messageEl.textContent = resData.message || "Failed to save project.";
+                        messageEl.className = "form-message error";
+                    }
+                })
+                .catch(function () {
+                    messageEl.textContent = isEdit ? "Project updated! (Sync pending)" : "Project saved! (Sync pending)";
+                    messageEl.className = "form-message success";
+                    resetProjectForm();
+                    renderManageList();
+                });
+        });
+
+        projectForm.addEventListener("reset", function () {
+            if (projectIdInput.value) return;
+            setTimeout(function () {
+                imageDataArray = [];
+                keepExistingImages = [];
+                selectedFiles = [];
+                renderPreviewGrid();
+                if (messageEl) { messageEl.textContent = ""; messageEl.className = "form-message"; }
+            }, 0);
+        });
+
+        cancelEditBtn.addEventListener("click", resetProjectForm);
+
+        var manageProjectsList = document.getElementById("manageProjectsList");
+        if (manageProjectsList) {
+            manageProjectsList.addEventListener("click", function (e) {
+                var thumb = e.target.closest("[data-project-id][data-img-index]");
+                if (thumb) {
+                    var pid = thumb.getAttribute("data-project-id");
+                    var startIdx = parseInt(thumb.getAttribute("data-img-index"), 10);
+                    fetch(API_BASE_URL + "/projects")
+                        .then(function (res) { return res.json(); })
+                        .then(function (result) {
+                            var proj = (result.data || []).find(function (p) { return String(p.id) === String(pid); });
+                            if (proj && proj.images && proj.images.length > 0) openLightbox(proj.images, startIdx, proj.title);
+                        });
+                    return;
+                }
+
+                var editBtn = e.target.closest("[data-edit]");
+                if (editBtn) {
+                    var id = editBtn.getAttribute("data-edit");
+                    fetch(API_BASE_URL + "/projects")
+                        .then(function (res) { return res.json(); })
+                        .then(function (result) {
+                            var proj = (result.data || []).find(function (p) { return String(p.id) === String(id); });
+                            if (proj) fillFormForEdit(proj);
+                        });
+                    return;
+                }
+
+                var delBtn = e.target.closest("[data-delete]");
+                if (delBtn) {
+                    if (!confirm("Are you sure you want to delete this project?")) return;
+                    var delId = delBtn.getAttribute("data-delete");
+                    fetch(API_BASE_URL + "/projects/" + delId, { method: "DELETE" })
+                        .then(function (res) { return res.json(); })
+                        .then(function (resData) {
+                            if (resData.success) {
+                                if (String(projectIdInput.value) === String(delId)) resetProjectForm();
+                                renderManageList();
+                                messageEl.textContent = "Project deleted successfully.";
+                                messageEl.className = "form-message success";
+                            } else {
+                                messageEl.textContent = resData.message || "Failed to delete project.";
+                                messageEl.className = "form-message error";
+                            }
+                        })
+                        .catch(function () {
+                            messageEl.textContent = "Error deleting project.";
+                            messageEl.className = "form-message error";
+                        });
+                }
             });
         }
-    });
 
-    renderManageList();
+        renderManageList();
+    }
 }
+
+// ─── Public Profile (About + Experience) ──────────────────────────────────────
+
+loadPublicProfile();
 
 // ─── Logout ───────────────────────────────────────────────────────────────────
 
-const logoutBtn = document.getElementById("logoutBtn");
+var logoutBtn = document.getElementById("logoutBtn");
 if (logoutBtn) {
     logoutBtn.addEventListener("click", function (e) {
         e.preventDefault();
-        // Hapus semua data otentikasi dari localStorage
-        localStorage.removeItem("adminToken");
         setLoggedIn(false);
-        window.location.href = "index.html";
+        window.location.href = "login.html";
     });
-}
-
-// ─── Public Projects Page ─────────────────────────────────────────────────────
-
-const projectsContainer = document.querySelector(".projects-container");
-if (projectsContainer && document.getElementById("projects")) {
-    projectsContainer.innerHTML = '<p class="empty-list">Loading projects...</p>';
-
-    fetch("https://my-portofolio-7o3h.vercel.app/api/projects")
-        .then(function (response) {
-            return response.json();
-        })
-        .then(function (result) {
-            const saved = result.data || [];
-            projectsContainer.innerHTML = "";
-
-            if (saved.length === 0) {
-                projectsContainer.innerHTML =
-                    '<p class="empty-list">No projects to display yet.</p>';
-            } else {
-                const firstThree = saved.slice(0, 3);
-                const rest = saved.slice(3);
-
-                function buildCard(project, idx) {
-                    const imgs = project.images || [];
-                    const card = document.createElement("div");
-                    card.className = "projects-card";
-
-                    if (imgs.length > 0) {
-                        card.classList.add("projects-card-clickable");
-                        card.setAttribute("data-project-idx", String(idx));
-                        card.setAttribute("title", "Click to view images");
-                        card.setAttribute("role", "button");
-                        card.setAttribute("tabindex", "0");
-                    }
-
-                    let html = "";
-                    if (imgs.length > 0) {
-                        html += `<div class="card-img-wrap">`;
-                        html += `<img src="${imgs[0]}" alt="${escapeHtml(project.title)}" class="clickable-image">`;
-                        if (imgs.length > 1) {
-                            html += `<span class="img-count-badge"><i class="fa-solid fa-images"></i> ${imgs.length}</span>`;
-                        }
-                        html += `</div>`;
-                    }
-                    html += `<h3>${escapeHtml(project.title)}</h3><br>`;
-                    html += `<p>${escapeHtml(project.description)}</p><br>`;
-                    if (project.link) {
-                        html += `<a href="${escapeHtml(project.link)}" target="_blank" rel="noopener" class="project-link">View Project</a>`;
-                    }
-                    card.innerHTML = html;
-                    return card;
-                }
-
-                const rowFirst = document.createElement("div");
-                rowFirst.className = "projects-row-first";
-                firstThree.forEach(function (project, i) {
-                    rowFirst.appendChild(buildCard(project, i));
-                });
-                projectsContainer.appendChild(rowFirst);
-
-                if (rest.length > 0) {
-                    const rowRest = document.createElement("div");
-                    rowRest.className = "projects-row-rest";
-                    rest.forEach(function (project, i) {
-                        rowRest.appendChild(buildCard(project, i + 3));
-                    });
-                    projectsContainer.appendChild(rowRest);
-                }
-            }
-
-            projectsContainer.addEventListener("click", function (e) {
-                if (e.target.closest("a")) return;
-                const card = e.target.closest("[data-project-idx]");
-                if (!card) return;
-                const idx = parseInt(card.getAttribute("data-project-idx"), 10);
-                const project = saved[idx];
-                if (project && project.images && project.images.length > 0) {
-                    openLightbox(project.images, 0, project.title);
-                }
-            });
-
-            projectsContainer.addEventListener("keydown", function (e) {
-                if (e.key !== "Enter" && e.key !== " ") return;
-                const card = e.target.closest("[data-project-idx]");
-                if (!card) return;
-                e.preventDefault();
-                const idx = parseInt(card.getAttribute("data-project-idx"), 10);
-                const project = saved[idx];
-                if (project && project.images && project.images.length > 0) {
-                    openLightbox(project.images, 0, project.title);
-                }
-            });
-        })
-        .catch(function (error) {
-            console.error("Error fetching projects:", error);
-            projectsContainer.innerHTML = '<p class="empty-list">Failed to load projects. Please try again later.</p>';
-        });
 }

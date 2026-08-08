@@ -1,205 +1,36 @@
-# PRD — Ridwan Portfolio CMS
+# Product Requirement Document (PRD)
+## Dynamic Portfolio & Auto-ATS Resume Builder
 
-## 1. Vision
+### 1. Project Overview
+A modern, responsive, dynamic personal portfolio website inspired by Brittany Chiang's layout design, integrated with an Admin Management System (CMS) via Supabase, and an automatic ATS Resume PDF Generator.
 
-Membuat website portfolio modern yang dapat dikelola melalui dashboard admin tanpa perlu mengubah kode secara manual.
+### 2. Core Features & Capabilities
 
-Target utama adalah menampilkan project, skill, dan informasi pribadi secara profesional serta mudah di-update.
+#### A. Public View (Frontend)
+- **Layout Inspiration:** Brittany Chiang design (Sticky left sidebar with navigation/bio/socials, scrollable right column for content).
+- **Interactive Effects:** Mouse-tracking spotlight effect, smooth scrolling, active link indicator on scroll.
+- **Theme Toggle:** Dark Mode / Light Mode switcher with local storage persistence.
+- **Dynamic Content:** Fetches profile, experiences, education, and projects directly from Supabase.
+- **ATS CV Download Button:** One-click button to automatically generate and download an ATS-compliant PDF resume from the latest database records.
 
----
+#### B. Admin Dashboard (`/admin`)
+- **Authentication:** Protected routes using Supabase Auth (Email/Password).
+- **Profile Management:** Edit name, title, short bio, social links, and contact info.
+- **Experience & Education Manager (CRUD):** Add, update, delete, and reorder work experience, organizational roles, or education history.
+- **Project Manager (CRUD):** Add, update, delete projects with title, description, tech stack tags, and external links.
+- **Auto-Sync:** Real-time updates reflected immediately on the public portfolio.
 
-## 2. Users
+#### C. Auto-Generate ATS Resume
+- Standard ATS single-column clean layout using `@react-pdf/renderer` or `jspdf/html2pdf.js`.
+- Clean typography (Helvetica/Arial), properly categorized sections, no decorative elements on PDF output to ensure high ATS parsing rate.
 
-### Visitor
-- Melihat halaman utama
-- Melihat daftar project
-- Melihat detail project
-- Membuka link GitHub dan demo
+### 3. Tech Stack
+- **Framework:** Next.js (App Router) or HTML/React + Tailwind CSS.
+- **Backend / Database:** Supabase (Auth, Postgres Database, Storage).
+- **Icons:** Lucide React / FontAwesome.
+- **PDF Generation:** `@react-pdf/renderer` or `jspdf` / `html2pdf.js`.
 
-### Admin
-- Login
-- Logout
-- Menambah project
-- Mengedit project
-- Menghapus project
-- Upload thumbnail project
-
----
-
-## 3. Success Criteria (MVP)
-
-Project dianggap selesai jika:
-
-- Admin bisa login
-- Admin bisa tambah/edit/hapus project
-- Data tersimpan di PostgreSQL
-- Pengunjung bisa melihat project
-- Website mobile responsive
-- Website online (Vercel + Render)
-
----
-
-## 4. Tech Stack
-
-### Frontend
-- Next.js 15
-- Tailwind CSS
-
-### Backend
-- Node.js
-- Express.js
-
-### Database
-- PostgreSQL
-- Prisma ORM
-
-### Deployment
-- Frontend: Vercel
-- Backend: Render
-- Database: Neon PostgreSQL
-
----
-
-## 5. Pages
-
-### Public Pages
-- Home
-- About
-- Skills
-- Projects
-- Contact
-
-### Admin Pages
-- /admin/login
-- /admin/dashboard
-- /admin/projects/new
-- /admin/projects/[id]/edit
-
----
-
-## 6. Data Model
-
-### Project
-
-| Field | Type |
-|------|------|
-| id | UUID |
-| title | String |
-| slug | String |
-| description | Text |
-| technologies | String |
-| imageUrl | String |
-| githubUrl | String |
-| demoUrl | String |
-| featured | Boolean |
-| createdAt | DateTime |
-| updatedAt | DateTime |
-
-### Admin
-
-| Field | Type |
-|------|------|
-| id | UUID |
-| username | String |
-| passwordHash | String |
-| createdAt | DateTime |
-
----
-
-## 7. API Endpoints
-
-### Auth
-- POST /api/auth/login
-- POST /api/auth/logout
-
-### Projects
-- GET /api/projects
-- GET /api/projects/:slug
-- POST /api/projects
-- PUT /api/projects/:id
-- DELETE /api/projects/:id
-
-### Upload
-- POST /api/upload
-
----
-
-## 8. UI Requirements
-
-### Home
-- Hero section
-- Short introduction
-- Featured projects
-- Contact CTA
-
-### Projects
-- Grid layout
-- Project image
-- Tech badges
-- GitHub button
-- Live demo button
-
-### Dashboard
-- Table of projects
-- Search by title
-- Add project button
-- Edit/Delete actions
-
----
-
-## 9. Security
-
-- Password di-hash menggunakan bcrypt
-- Session/JWT untuk autentikasi
-- Route admin diproteksi
-- Upload hanya menerima image
-
----
-
-## 10. Development Phases
-
-### Phase 1 — Backend Setup
-- [ ] Initialize Express
-- [ ] Configure Prisma
-- [ ] Connect PostgreSQL
-- [ ] Create models
-- [ ] Run migration
-
-### Phase 2 — Projects API
-- [ ] GET all projects
-- [ ] GET by slug
-- [ ] CREATE project
-- [ ] UPDATE project
-- [ ] DELETE project
-
-### Phase 3 — Authentication
-- [ ] Login endpoint
-- [ ] Password hashing
-- [ ] JWT/session
-- [ ] Middleware protect admin routes
-
-### Phase 4 — Frontend Integration
-- [ ] Fetch projects
-- [ ] Project detail page
-- [ ] Admin dashboard
-- [ ] Forms for create/edit
-
-### Phase 5 — Upload & Deployment
-- [ ] Image upload
-- [ ] Deploy backend
-- [ ] Deploy frontend
-- [ ] Final testing
-
----
-
-## 11. Non-Goals (Jangan Dibuat Sekarang)
-
-- Multi-admin
-- Comments
-- Likes
-- Blog
-- Analytics dashboard
-- Real-time features
-- Dark/light theme switch
-
-Fokus hanya pada portfolio CMS yang stabil dan selesai.
+### 4. Database Schema (Supabase)
+- `profile`: `id`, `full_name`, `title`, `bio`, `about_me`, `contact_email`, `social_links` (JSON)
+- `experiences`: `id`, `type` (work/education), `role_title`, `organization`, `start_date`, `end_date`, `description`, `is_current`
+- `projects`: `id`, `title`, `description`, `technologies` (Array/JSON), `github_url`, `live_url`, `featured`

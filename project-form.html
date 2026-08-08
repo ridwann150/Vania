@@ -1,74 +1,144 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Projects | Ridwan Maulana</title>
+    <title>Admin Dashboard | Vania Anggraini</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <header>
-        <nav>
-            <h1>Full Stack Developer</h1>
-            <div class="Menu">
-                <a href="index.html">Home</a>
-                <a href="index.html">About</a>
-                <a href="index.html">Projects</a>
-                <a href="project-form.html">Manage Projects</a>
-                <a href="#" id="logoutBtn">Logout</a>
+<body style="display:flex;flex-direction:column;min-height:100vh;">
+    <header class="admin-header">
+        <nav class="admin-nav">
+            <h1 class="admin-brand">Vania Anggraini — Admin</h1>
+            <div class="admin-menu">
+                <a href="index.html" class="btn-nav"><i class="fa-solid fa-eye"></i> Preview Web</a>
+                <a href="#" id="logoutBtn" class="btn-nav btn-logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
             </div>
         </nav>
     </header>
 
     <main class="manage-page">
-        <div class="auth-card auth-card-wide">
-            <h2 id="formHeading">ADD PROJECT</h2>
-            <p class="auth-subtitle" id="formSubtitle">Fill in the details for a new portfolio project</p>
-
-            <form id="projectForm" enctype="multipart/form-data">
-                <input type="hidden" id="projectId" value="">
-
-                <div class="form-group">
-                    <label for="projectImage">Upload Images <span class="optional-tag">(select multiple)</span></label>
-                    <input type="file" id="projectImage" name="projectImage" accept="image/*" multiple>
-                    <p class="field-hint" id="imageHint">Required when adding a new project. You can select multiple images.</p>
-                    <div id="imagePreview" class="image-preview-grid"></div>
-                </div>
-
-                <div class="form-group">
-                    <label for="projectTitle">Project Title</label>
-                    <input type="text" id="projectTitle" name="projectTitle" placeholder="Example: E-Commerce Website" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="projectDescription">Description</label>
-                    <textarea id="projectDescription" name="projectDescription" rows="5" placeholder="Briefly describe this project..." required></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="projectLink">Project Link <span class="optional-tag">(optional)</span></label>
-                    <input type="url" id="projectLink" name="projectLink" placeholder="https://...">
-                </div>
-
-                <p id="formMessage" class="form-message"></p>
-
-                <div class="form-actions">
-                    <button type="button" class="btn-secondary" id="cancelEditBtn" hidden>Cancel</button>
-                    <button type="reset" class="btn-secondary" id="resetBtn">Reset</button>
-                    <button type="submit" class="btn-primary" id="submitBtn">Save Project</button>
-                </div>
-            </form>
-
-            <a href="index.html" class="auth-back">&larr; View Project List</a>
+        <div class="admin-tabs">
+            <button class="tab-btn active" data-tab="tab-about">Manage About</button>
+            <button class="tab-btn" data-tab="tab-experience">Manage Experience</button>
+            <button class="tab-btn" data-tab="tab-projects">Manage Projects</button>
         </div>
 
-        <section class="manage-list-section">
-            <h2>PROJECT LIST</h2>
-            <p class="auth-subtitle">Edit or delete all saved projects</p>
-            <p id="projectCount" class="project-count"></p>
-            <div id="manageProjectsList" class="manage-projects-list"></div>
-        </section>
+        <!-- TAB: ABOUT -->
+        <div id="tab-about" class="tab-content active">
+            <div class="auth-card auth-card-wide" style="max-width: 860px;">
+                <h2>ABOUT & BIO</h2>
+                <p class="auth-subtitle">Update your personal information and bio</p>
+                <form id="aboutForm">
+                    <div class="form-group">
+                        <label for="aboutName">Full Name</label>
+                        <input type="text" id="aboutName" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="aboutTagline">Tagline / Title</label>
+                        <input type="text" id="aboutTagline" name="tagline" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="aboutShort">Short Bio</label>
+                        <textarea id="aboutShort" name="shortBio" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="aboutDetail">About Paragraph(s)</label>
+                        <textarea id="aboutDetail" name="aboutDetail" rows="6"></textarea>
+                    </div>
+                    <p id="aboutMessage" class="form-message"></p>
+                    <button type="submit" class="btn-primary" style="width: 100%;">Save About Info</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- TAB: EXPERIENCE -->
+        <div id="tab-experience" class="tab-content">
+            <div class="auth-card auth-card-wide" style="max-width: 860px;">
+                <h2 id="expFormHeading">ADD EXPERIENCE</h2>
+                <p class="auth-subtitle" id="expFormSubtitle">Add a new educational or professional experience</p>
+                <form id="experienceForm">
+                    <input type="hidden" id="expId" value="">
+                    <div class="form-group">
+                        <label for="expRole">Role / Position / Degree</label>
+                        <input type="text" id="expRole" required placeholder="e.g. Digital Business Student">
+                    </div>
+                    <div class="form-group">
+                        <label for="expOrg">Organization / Company</label>
+                        <input type="text" id="expOrg" required placeholder="e.g. Universitas Satya Terra Bhinneka">
+                    </div>
+                    <div class="form-group">
+                        <label for="expPeriod">Period / Year</label>
+                        <input type="text" id="expPeriod" required placeholder="e.g. 2023 — PRESENT">
+                    </div>
+                    <div class="form-group">
+                        <label for="expDesc">Description</label>
+                        <textarea id="expDesc" rows="4" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="expTags">Tech Tags <span class="optional-tag">(comma separated)</span></label>
+                        <input type="text" id="expTags" placeholder="E-Commerce, Digital Marketing...">
+                    </div>
+                    <p id="expMessage" class="form-message"></p>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" id="expCancelBtn" hidden>Cancel</button>
+                        <button type="reset" class="btn-secondary" id="expResetBtn">Reset</button>
+                        <button type="submit" class="btn-primary" id="expSubmitBtn">Save Experience</button>
+                    </div>
+                </form>
+            </div>
+            <section class="manage-list-section" style="max-width: 860px;">
+                <h2>EXPERIENCE LIST</h2>
+                <p class="auth-subtitle">Edit or delete saved experiences</p>
+                <div id="manageExpList" class="manage-projects-list"></div>
+            </section>
+        </div>
+
+        <!-- TAB: PROJECTS -->
+        <div id="tab-projects" class="tab-content">
+            <div class="auth-card auth-card-wide" style="max-width: 860px;">
+                <h2 id="formHeading">ADD PROJECT</h2>
+                <p class="auth-subtitle" id="formSubtitle">Fill in the details for a new portfolio project</p>
+                <form id="projectForm" enctype="multipart/form-data">
+                    <input type="hidden" id="projectId" value="">
+                    <div class="form-group">
+                        <label for="projectImage">Upload Images <span class="optional-tag">(select multiple)</span></label>
+                        <input type="file" id="projectImage" name="projectImage" accept="image/*" multiple>
+                        <p class="field-hint" id="imageHint">Required when adding a new project.</p>
+                        <div id="imagePreview" class="image-preview-grid"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="projectTitle">Project Title</label>
+                        <input type="text" id="projectTitle" name="projectTitle" placeholder="Example: E-Commerce Website" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="projectDescription">Description</label>
+                        <textarea id="projectDescription" name="projectDescription" rows="5" placeholder="Briefly describe this project..." required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="projectTags">Tech Tags <span class="optional-tag">(comma separated)</span></label>
+                        <input type="text" id="projectTags" name="projectTags" placeholder="Next.js, Tailwind, Supabase...">
+                    </div>
+                    <div class="form-group">
+                        <label for="projectLink">Project Link <span class="optional-tag">(optional)</span></label>
+                        <input type="url" id="projectLink" name="projectLink" placeholder="https://...">
+                    </div>
+                    <p id="formMessage" class="form-message"></p>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" id="cancelEditBtn" hidden>Cancel</button>
+                        <button type="reset" class="btn-secondary" id="resetBtn">Reset</button>
+                        <button type="submit" class="btn-primary" id="submitBtn">Save Project</button>
+                    </div>
+                </form>
+            </div>
+            <section class="manage-list-section" style="max-width: 860px;">
+                <h2>PROJECT LIST</h2>
+                <p class="auth-subtitle">Edit or delete all saved projects</p>
+                <p id="projectCount" class="project-count"></p>
+                <div id="manageProjectsList" class="manage-projects-list"></div>
+            </section>
+        </div>
     </main>
 
     <div id="imageLightbox" class="image-lightbox" hidden>
@@ -81,8 +151,10 @@
         <button type="button" class="lightbox-arrow lightbox-next" id="lightboxNext" aria-label="Next">&#8250;</button>
     </div>
 
-    <footer>
-        <p>&copy; 2026 MHD Ridwan Maulana</p>
+    <footer class="site-footer">
+        <span></span>
+        <p>&copy; 2026 MHD Ridwan Maulana. All rights reserved.</p>
+        <span></span>
     </footer>
 
     <script src="script.js"></script>
