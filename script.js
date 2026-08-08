@@ -129,6 +129,19 @@ function setLoggedIn(value) {
     }
 }
 
+// ─── Admin Floating Badge ─────────────────────────────────────────────────────
+
+(function syncAdminBadge() {
+    var badge = document.getElementById("adminBadge");
+    if (!badge) return;
+    function updateBadge() {
+        var loggedIn = localStorage.getItem(AUTH_KEY) === "true" || !!localStorage.getItem("adminToken");
+        badge.hidden = !loggedIn;
+    }
+    updateBadge();
+    window.addEventListener("storage", updateBadge);
+})();
+
 // ─── localStorage helpers ─────────────────────────────────────────────────────
 
 var LS_KEYS = {
@@ -895,27 +908,62 @@ if (adminTabBtns.length > 0) {
         function renderManageList() {
             var listEl = document.getElementById("manageProjectsList");
             if (!listEl) return;
+            var dummyProjects = [
+                { id: "dummy-1", title: "Digital Business Case Study", description: "In-depth analysis of traditional retail transformation to omni-channel e-commerce.", technologies: ["Business Strategy", "Data Analysis", "E-Commerce"], link: "" },
+                { id: "dummy-2", title: "E-Commerce Strategy Plan", description: "Comprehensive go-to-market strategy for a local brand entering the national market.", technologies: ["Digital Marketing", "SEO", "Growth Hacking"], link: "" },
+                { id: "dummy-3", title: "UX Research for Fintech App", description: "User interviews and usability testing to improve mobile payment app onboarding.", technologies: ["User Research", "Figma", "Usability Testing"], link: "" }
+            ];
             listEl.innerHTML = '<p class="empty-list">Loading...</p>';
-            var _localPrj = lsGet(LS_KEYS.projects) || [];
-            if (_localPrj.length > 0) _renderProjectManageList(_localPrj);
+            var _localPrj = lsGet(LS_KEYS.projects);
+            if (_localPrj && _localPrj.length > 0) {
+                updateProjectCount(_localPrj);
+                _renderProjectManageList(_localPrj);
+                return;
+            }
+            renderDummyProjects(listEl, dummyProjects, "No projects yet. Add one using the form above.");
             fetch(API_BASE_URL + "/projects")
                 .then(function (res) { return res.json(); })
                 .then(function (result) {
                     var projects = result.data || [];
-                    if (projects.length > 0) { lsSet(LS_KEYS.projects, projects); _renderProjectManageList(projects); }
-                    else if (_localPrj.length === 0) listEl.innerHTML = '<p class="empty-list">No projects yet. Add one using the form above.</p>';
+                    if (projects.length > 0) {
+                        lsSet(LS_KEYS.projects, projects);
+                        updateProjectCount(projects);
+                        _renderProjectManageList(projects);
+                    }
                 })
                 .catch(function () {
-                    if (_localPrj.length === 0) listEl.innerHTML = '<p class="empty-list">Failed to load projects from server.</p>';
+                    renderDummyProjects(listEl, dummyProjects, "No projects yet. Add one using the form above.");
                 });
+        }
+
+        function renderDummyProjects(listEl, dummies, emptyMsg) {
+            var countEl = document.getElementById("projectCount");
+            if (countEl) countEl.textContent = "Showing dummy projects";
+            listEl.innerHTML = dummies.map(function (p) {
+                var linkHtml = '<span class="no-link">No link</span>';
+                return '<div class="manage-card" data-id="' + p.id + '">' +
+                    '<div class="manage-card-body">' +
+                    '<h3>' + escapeHtml(p.title) + '</h3>' +
+                    '<p>' + escapeHtml(p.description) + '</p>' +
+                    buildTagsHtml(p.technologies) +
+                    linkHtml +
+                    '<div class="manage-actions">' +
+                    '<button type="button" class="btn-edit" data-edit="' + p.id + '"><i class="fa-solid fa-pen"></i> Edit</button>' +
+                    '<button type="button" class="btn-delete" data-delete="' + p.id + '"><i class="fa-solid fa-trash"></i> Delete</button>' +
+                    '</div></div></div>';
+            }).join("");
+        }
+
+        function updateProjectCount(projects) {
+            var countEl = document.getElementById("projectCount");
+            if (countEl) countEl.textContent = projects.length === 0 ? "No projects yet" : "Showing " + projects.length + " project" + (projects.length === 1 ? "" : "s");
         }
 
         function _renderProjectManageList(projects) {
             var listEl = document.getElementById("manageProjectsList");
             if (!listEl) return;
             var sorted = projects.slice().sort(function (a, b) { return Number(b.id) - Number(a.id); });
-            var countEl = document.getElementById("projectCount");
-            if (countEl) countEl.textContent = sorted.length === 0 ? "No projects yet" : "Showing " + sorted.length + " project" + (sorted.length === 1 ? "" : "s");
+            updateProjectCount(sorted);
             if (sorted.length === 0) { listEl.innerHTML = '<p class="empty-list">No projects yet. Add one using the form above.</p>'; return; }
             listEl.innerHTML = sorted.map(function (project) {
                     var imgs = project.images || [];
@@ -940,6 +988,26 @@ if (adminTabBtns.length > 0) {
                         '<button type="button" class="btn-delete" data-delete="' + project.id + '"><i class="fa-solid fa-trash"></i> Delete</button>' +
                         '</div></div></div>';
                 }).join("");
+        }
+
+        // ── Persist project save to localStorage (for live-server + offline) ──
+
+        function syncLocalProjects() {
+            var _local = lsGet(LS_KEYS.projects) || [];
+            lsSet(LS_KEYS.projects, _local);
+        }
+
+        function addLocalProject(project) {
+            var _local = lsGet(LS_KEYS.projects) || [];
+            project.id = "local_" + Date.now();
+            _local.push(project);
+            lsSet(LS_KEYS.projects, _local);
+        }
+
+        function removeLocalProject(id) {
+            var _local = lsGet(LS_KEYS.projects) || [];
+            _local = _local.filter(function (p) { return String(p.id) !== String(id); });
+            lsSet(LS_KEYS.projects, _local);
         }
 
         imageInput.addEventListener("change", function () {
@@ -973,35 +1041,43 @@ if (adminTabBtns.length > 0) {
                 return;
             }
 
+            var localProject = {
+                title: title,
+                description: description,
+                link: link || "",
+                technologies: tags ? tags.split(",").map(function (t) { return t.trim(); }).filter(Boolean) : [],
+                images: keepExistingImages.concat(imageDataArray)
+            };
+
+            if (editId) {
+                var _localEdit = lsGet(LS_KEYS.projects) || [];
+                _localEdit = _localEdit.map(function (p) {
+                    return String(p.id) === String(editId) ? Object.assign({}, p, localProject, { id: p.id }) : p;
+                });
+                lsSet(LS_KEYS.projects, _localEdit);
+            } else {
+                addLocalProject(localProject);
+            }
+
+            messageEl.textContent = "Data Berhasil Disimpan!";
+            messageEl.className = "form-message success";
+            setTimeout(function () { messageEl.textContent = ""; }, 3000);
+
             var formData = new FormData();
             formData.append("title", title);
             formData.append("description", description);
             formData.append("link", link || "");
             formData.append("technologies", tags);
             selectedFiles.forEach(function (file) { formData.append("image", file); });
-
             var isEdit = !!editId;
             var url = isEdit ? API_BASE_URL + "/projects/" + editId : API_BASE_URL + "/projects";
-
             fetch(url, { method: isEdit ? "PUT" : "POST", body: formData })
                 .then(function (res) { return res.json(); })
                 .then(function (resData) {
-                    if (resData.success) {
-                        messageEl.textContent = isEdit ? "Project updated successfully!" : "Project saved successfully!";
-                        messageEl.className = "form-message success";
-                        resetProjectForm();
-                        renderManageList();
-                    } else {
-                        messageEl.textContent = resData.message || "Failed to save project.";
-                        messageEl.className = "form-message error";
-                    }
-                })
-                .catch(function () {
-                    messageEl.textContent = isEdit ? "Project updated! (Sync pending)" : "Project saved! (Sync pending)";
-                    messageEl.className = "form-message success";
-                    resetProjectForm();
                     renderManageList();
-                });
+                    if (!resData.success) { messageEl.textContent = "Data Berhasil Disimpan! (Server sync pending)"; setTimeout(function () { messageEl.textContent = ""; }, 3000); }
+                })
+                .catch(function () { renderManageList(); });
         });
 
         projectForm.addEventListener("reset", function () {
@@ -1024,10 +1100,12 @@ if (adminTabBtns.length > 0) {
                 if (thumb) {
                     var pid = thumb.getAttribute("data-project-id");
                     var startIdx = parseInt(thumb.getAttribute("data-img-index"), 10);
+                    var proj = (lsGet(LS_KEYS.projects) || []).find(function (p) { return String(p.id) === String(pid); });
+                    if (proj && proj.images && proj.images.length > 0) { openLightbox(proj.images, startIdx, proj.title); return; }
                     fetch(API_BASE_URL + "/projects")
                         .then(function (res) { return res.json(); })
                         .then(function (result) {
-                            var proj = (result.data || []).find(function (p) { return String(p.id) === String(pid); });
+                            proj = (result.data || []).find(function (p) { return String(p.id) === String(pid); });
                             if (proj && proj.images && proj.images.length > 0) openLightbox(proj.images, startIdx, proj.title);
                         });
                     return;
@@ -1036,11 +1114,13 @@ if (adminTabBtns.length > 0) {
                 var editBtn = e.target.closest("[data-edit]");
                 if (editBtn) {
                     var id = editBtn.getAttribute("data-edit");
+                    var projEdit = (lsGet(LS_KEYS.projects) || []).find(function (p) { return String(p.id) === String(id); });
+                    if (projEdit) { fillFormForEdit(projEdit); return; }
                     fetch(API_BASE_URL + "/projects")
                         .then(function (res) { return res.json(); })
                         .then(function (result) {
-                            var proj = (result.data || []).find(function (p) { return String(p.id) === String(id); });
-                            if (proj) fillFormForEdit(proj);
+                            projEdit = (result.data || []).find(function (p) { return String(p.id) === String(id); });
+                            if (projEdit) fillFormForEdit(projEdit);
                         });
                     return;
                 }
@@ -1049,23 +1129,13 @@ if (adminTabBtns.length > 0) {
                 if (delBtn) {
                     if (!confirm("Are you sure you want to delete this project?")) return;
                     var delId = delBtn.getAttribute("data-delete");
-                    fetch(API_BASE_URL + "/projects/" + delId, { method: "DELETE" })
-                        .then(function (res) { return res.json(); })
-                        .then(function (resData) {
-                            if (resData.success) {
-                                if (String(projectIdInput.value) === String(delId)) resetProjectForm();
-                                renderManageList();
-                                messageEl.textContent = "Project deleted successfully.";
-                                messageEl.className = "form-message success";
-                            } else {
-                                messageEl.textContent = resData.message || "Failed to delete project.";
-                                messageEl.className = "form-message error";
-                            }
-                        })
-                        .catch(function () {
-                            messageEl.textContent = "Error deleting project.";
-                            messageEl.className = "form-message error";
-                        });
+                    removeLocalProject(delId);
+                    messageEl.textContent = "Data Berhasil Disimpan!";
+                    messageEl.className = "form-message success";
+                    setTimeout(function () { messageEl.textContent = ""; }, 3000);
+                    if (String(projectIdInput.value) === String(delId)) resetProjectForm();
+                    renderManageList();
+                    fetch(API_BASE_URL + "/projects/" + delId, { method: "DELETE" }).catch(function () {});
                 }
             });
         }
@@ -1080,6 +1150,14 @@ loadPublicProfile();
 
 // ─── Logout ───────────────────────────────────────────────────────────────────
 
+var logoutBtn = document.getElementById("logoutBtn");
+if (logoutBtn) {
+    logoutBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        setLoggedIn(false);
+        window.location.href = "login.html";
+    });
+}
 var logoutBtn = document.getElementById("logoutBtn");
 if (logoutBtn) {
     logoutBtn.addEventListener("click", function (e) {

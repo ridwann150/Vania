@@ -63,6 +63,44 @@ body {
     transition: background-color var(--transition), color var(--transition);
 }
 
+/* ─── Admin Floating Badge ───────────────────────────────────────────────────── */
+
+.admin-floating-badge {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 999;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(244, 114, 182, 0.15);
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: 0.2s;
+    box-shadow: 0 4px 16px rgba(244, 114, 182, 0.25);
+}
+
+.admin-floating-badge:hover {
+    background: var(--accent);
+    color: #0a0f1e;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(244, 114, 182, 0.4);
+}
+
+.admin-floating-badge .badge-icon {
+    font-size: 14px;
+}
+
+.admin-floating-badge[hidden] {
+    display: none !important;
+}
+
 /* ─── Spotlight Effect ────────────────────────────────────────────────────── */
 
 .spotlight {
@@ -330,7 +368,6 @@ body {
 .section {
     padding: 5rem 0;
     scroll-margin-top: 0;
-    border-top: 1px solid var(--card-border);
 }
 
 .section:first-child {
@@ -645,13 +682,19 @@ body {
 .site-footer {
     color: var(--text-muted);
     font-size: 13px;
-    padding-top: 24px;
-    border-top: 1px solid var(--card-border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-top: 24px;
+    text-align: center;
+    width: 100%;
+    margin: 3rem auto 1rem;
+}
+
+.site-footer .admin-link {
+    position: absolute;
+    right: 24px;
+    opacity: 0.5;
+}
+
+.site-footer span {
+    display: none;
 }
 
 .site-footer-login {
