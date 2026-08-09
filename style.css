@@ -296,6 +296,11 @@ body {
         display: none !important;
     }
 
+    /* Link admin footer hanya untuk Desktop; di Mobile hanya ada di hamburger */
+    .site-footer .admin-link {
+        display: none !important;
+    }
+
     .social-links {
         position: relative !important;
         z-index: 99 !important;
@@ -792,6 +797,13 @@ body {
     position: absolute;
     right: 24px;
     opacity: 0.5;
+}
+
+/* Link admin footer hanya tampil di Desktop */
+@media (min-width: 769px) {
+    .site-footer .admin-link {
+        display: inline;
+    }
 }
 
 .site-footer span {

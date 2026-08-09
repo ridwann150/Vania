@@ -288,10 +288,11 @@ function loadPublicProjects() {
     if (!projectsGrid) return;
     projectsGrid.innerHTML = '<p class="empty-list">Loading projects...</p>';
 
-    var _localProjects = lsGet(LS_KEYS.projects);
-
     fetch(API_BASE_URL + "/projects", { cache: "no-store" })
-        .then(function (response) { return response.json(); })
+        .then(function (response) {
+            if (!response.ok) throw new Error("projects fetch failed");
+            return response.json();
+        })
         .then(function (result) {
             var saved = result.data || [];
             lsSet(LS_KEYS.projects, saved);
@@ -304,6 +305,7 @@ function loadPublicProjects() {
         })
         .catch(function () {
             projectsGrid.innerHTML = "";
+            var _localProjects = lsGet(LS_KEYS.projects);
             if (_localProjects && _localProjects.length > 0) {
                 renderProjectCards(_localProjects);
             } else {
@@ -391,24 +393,24 @@ function loadPublicProfile() {
     var aboutBodyEl = document.getElementById("aboutBody");
     var expListEl = document.getElementById("experienceList");
 
-    function applyProfile(d) {
-        var name = d.full_name || "";
-        var tagline = d.title || "";
-        var bio = d.bio || "";
+    function renderProfileData(data) {
+        var name = data.full_name || "";
+        var tagline = data.title || "";
+        var bio = data.bio || "";
 
-        // Update elemen desktop (sidebar) DAN mobile hero secara bersamaan.
-        document.querySelectorAll(".profile-name, #mobile-name, #profile-name, [data-profile-name]").forEach(function (el) {
+        // Isi elemen Mobile DAN Desktop secara bersamaan.
+        document.querySelectorAll("#profile-name, #mobile-name, .profile-name").forEach(function (el) {
             if (name) el.textContent = name;
         });
-        document.querySelectorAll(".profile-tagline, #mobile-tagline, #profile-tagline, [data-profile-tagline]").forEach(function (el) {
+        document.querySelectorAll("#profile-tagline, #mobile-tagline, .profile-tagline").forEach(function (el) {
             el.textContent = tagline;
         });
-        document.querySelectorAll(".profile-bio, #mobile-bio, #profile-bio, [data-profile-bio]").forEach(function (el) {
+        document.querySelectorAll("#profile-bio, #mobile-bio, .profile-bio").forEach(function (el) {
             el.textContent = bio;
         });
 
-        if (aboutBodyEl && d.about_me) {
-            aboutBodyEl.innerHTML = (d.about_me || "").split("\n").filter(Boolean).map(function (p) {
+        if (aboutBodyEl && data.about_me) {
+            aboutBodyEl.innerHTML = (data.about_me || "").split("\n").filter(Boolean).map(function (p) {
                 return '<p>' + escapeHtml(p) + '</p>';
             }).join("");
         }
@@ -423,46 +425,44 @@ function loadPublicProfile() {
         }
     }
 
-    // --- Render localStorage as instant placeholder, refresh from API below ---
-    var _localAbout = lsGet(LS_KEYS.about);
-    var _didRenderAbout = false;
-    if (_localAbout) {
-        applyProfile(_localAbout);
-        _didRenderAbout = true;
-    }
-
-    var _localExps = lsGet(LS_KEYS.experiences);
-    if (_localExps && _localExps.length > 0 && expListEl) {
-        renderExperienceList(_localExps);
-    }
-
-    // --- Fetch fresh About from API (single source of truth, no cache) ---
+    // ── Fetch fresh About/Experience from API (single source of truth) ──────
+    // Hanya membaca localStorage jika API offline/gagal. Jika backend 200 OK,
+    // data Supabase SELALU menang sehingga Mobile & Desktop identik.
     fetch(API_BASE_URL + "/profile", { cache: "no-store" })
-        .then(function (res) { return res.json(); })
+        .then(function (res) {
+            if (!res.ok) throw new Error("profile fetch failed");
+            return res.json();
+        })
         .then(function (result) {
             var d = result.data || {};
             lsSet(LS_KEYS.about, d);
-            applyProfile(d);
-            // Clear stale localStorage so mobile & desktop read identical fresh data
-            if (!d.full_name) lsRemove(LS_KEYS.about);
+            renderProfileData(d);
         })
         .catch(function () {
-            if (!_didRenderAbout && aboutBodyEl) {
+            var _localAbout = lsGet(LS_KEYS.about);
+            if (_localAbout) {
+                renderProfileData(_localAbout);
+            } else if (aboutBodyEl) {
                 aboutBodyEl.innerHTML = '<p class="empty-list">No about content to display yet.</p>';
             }
         });
 
-    // --- Fetch fresh Experience from API (single source of truth, no cache) ---
     if (expListEl) {
         fetch(API_BASE_URL + "/experiences", { cache: "no-store" })
-            .then(function (res) { return res.json(); })
+            .then(function (res) {
+                if (!res.ok) throw new Error("experiences fetch failed");
+                return res.json();
+            })
             .then(function (result) {
                 var exps = result.data || [];
                 lsSet(LS_KEYS.experiences, exps);
                 renderExperienceList(exps);
             })
             .catch(function () {
-                if (!_localExps || _localExps.length === 0) {
+                var _localExps = lsGet(LS_KEYS.experiences);
+                if (_localExps && _localExps.length > 0) {
+                    renderExperienceList(_localExps);
+                } else {
                     renderExperienceList([]);
                 }
             });

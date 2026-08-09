@@ -32,26 +32,29 @@
 
     var aboutForm = document.getElementById("aboutForm");
     if (aboutForm) {
-        var _localAbout = lsGet(LS_KEYS.about);
-        if (_localAbout) {
-            document.getElementById("aboutName").value = _localAbout.full_name || "";
-            document.getElementById("aboutTagline").value = _localAbout.title || "";
-            document.getElementById("aboutShort").value = _localAbout.bio || "";
-            document.getElementById("aboutDetail").value = _localAbout.about_me || "";
-        }
-        fetch(API_BASE_URL + "/profile")
-            .then(function (res) { return res.json(); })
+        // Selalu ambil dari API (Supabase). localStorage hanya fallback offline.
+        fetch(API_BASE_URL + "/profile", { cache: "no-store" })
+            .then(function (res) {
+                if (!res.ok) throw new Error("profile fetch failed");
+                return res.json();
+            })
             .then(function (result) {
                 var d = result.data || {};
-                if (d.full_name) {
-                    document.getElementById("aboutName").value = d.full_name;
-                    document.getElementById("aboutTagline").value = d.title || "";
-                    document.getElementById("aboutShort").value = d.bio || "";
-                    document.getElementById("aboutDetail").value = d.about_me || "";
-                    lsSet(LS_KEYS.about, d);
-                }
+                document.getElementById("aboutName").value = d.full_name || "";
+                document.getElementById("aboutTagline").value = d.title || "";
+                document.getElementById("aboutShort").value = d.bio || "";
+                document.getElementById("aboutDetail").value = d.about_me || "";
+                lsSet(LS_KEYS.about, d);
             })
-            .catch(function () {});
+            .catch(function () {
+                var _localAbout = lsGet(LS_KEYS.about);
+                if (_localAbout) {
+                    document.getElementById("aboutName").value = _localAbout.full_name || "";
+                    document.getElementById("aboutTagline").value = _localAbout.title || "";
+                    document.getElementById("aboutShort").value = _localAbout.bio || "";
+                    document.getElementById("aboutDetail").value = _localAbout.about_me || "";
+                }
+            });
 
         aboutForm.addEventListener("submit", function (e) {
             e.preventDefault();
@@ -82,28 +85,25 @@
     function loadExperiences() {
         if (!manageExpList) return;
         manageExpList.innerHTML = '<p class="empty-list">Loading...</p>';
-        var _localExps = lsGet(LS_KEYS.experiences) || [];
-        if (_localExps.length > 0) {
-            renderExpList(_localExps);
-            fetch(API_BASE_URL + "/experiences")
-                .then(function (res) { return res.json(); })
-                .then(function (result) {
-                    var exps = result.data || [];
-                    if (exps.length > 0) { lsSet(LS_KEYS.experiences, exps); renderExpList(exps); }
-                })
-                .catch(function () {});
-        } else {
-            fetch(API_BASE_URL + "/experiences")
-                .then(function (res) { return res.json(); })
-                .then(function (result) {
-                    var exps = result.data || [];
-                    if (exps.length > 0) { lsSet(LS_KEYS.experiences, exps); renderExpList(exps); }
-                    else manageExpList.innerHTML = '<p class="empty-list">No experiences yet. Add one above.</p>';
-                })
-                .catch(function () {
+        // Selalu ambil dari API (Supabase). localStorage hanya fallback offline.
+        fetch(API_BASE_URL + "/experiences", { cache: "no-store" })
+            .then(function (res) {
+                if (!res.ok) throw new Error("experiences fetch failed");
+                return res.json();
+            })
+            .then(function (result) {
+                var exps = result.data || [];
+                lsSet(LS_KEYS.experiences, exps);
+                renderExpList(exps);
+            })
+            .catch(function () {
+                var _localExps = lsGet(LS_KEYS.experiences) || [];
+                if (_localExps.length > 0) {
+                    renderExpList(_localExps);
+                } else {
                     manageExpList.innerHTML = '<p class="empty-list">Could not load experiences from server.</p>';
-                });
-        }
+                }
+            });
     }
 
     function renderExpList(exps) {
@@ -348,33 +348,29 @@
             projectForm.scrollIntoView({ behavior: "smooth", block: "start" });
         }
 
-        // Tampilkan project dari localStorage dulu, lalu sinkronkan dari API.
+        // Selalu ambil dari API (Supabase). localStorage hanya fallback offline.
         function renderManageList() {
             var listEl = document.getElementById("manageProjectsList");
             if (!listEl) return;
             listEl.innerHTML = '<p class="empty-list">Loading...</p>';
-            var _localPrj = lsGet(LS_KEYS.projects);
-            if (_localPrj && _localPrj.length > 0) {
-                updateProjectCount(_localPrj);
-                _renderProjectManageList(_localPrj);
-            }
-            fetch(API_BASE_URL + "/projects")
-                .then(function (res) { return res.json(); })
+            fetch(API_BASE_URL + "/projects", { cache: "no-store" })
+                .then(function (res) {
+                    if (!res.ok) throw new Error("projects fetch failed");
+                    return res.json();
+                })
                 .then(function (result) {
                     var projects = result.data || [];
-                    if (projects.length > 0) {
-                        lsSet(LS_KEYS.projects, projects);
-                        updateProjectCount(projects);
-                        _renderProjectManageList(projects);
-                    } else if (!_localPrj || _localPrj.length === 0) {
-                        updateProjectCount([]);
-                        listEl.innerHTML = '<p class="empty-list">No projects yet. Add one using the form above.</p>';
-                    }
+                    lsSet(LS_KEYS.projects, projects);
+                    updateProjectCount(projects);
+                    _renderProjectManageList(projects);
                 })
                 .catch(function () {
-                    if (!_localPrj || _localPrj.length === 0) {
-                        updateProjectCount([]);
-                        listEl.innerHTML = '<p class="empty-list">No projects yet. Add one using the form above.</p>';
+                    var _localPrj = lsGet(LS_KEYS.projects);
+                    if (_localPrj && _localPrj.length > 0) {
+                        updateProjectCount(_localPrj);
+                        _renderProjectManageList(_localPrj);
+                    } else {
+                        listEl.innerHTML = '<p class="empty-list">Could not load projects from server.</p>';
                     }
                 });
         }
