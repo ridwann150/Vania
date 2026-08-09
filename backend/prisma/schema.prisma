@@ -19,3 +19,18 @@ model Project {
   images      String[] @default([])
   createdAt   DateTime @default(now())
 }
+
+model Experience {
+  id           String   @id @default(uuid()) @db.Uuid
+  type         String   @default("work") @db.VarChar(20)
+  role_title   String
+  organization String
+  period       String   @default("")
+  start_date   String   @default("")
+  end_date     String   @default("")
+  description  String   @default("")
+  technologies String[] @default([])
+  is_current   Boolean  @default(false)
+  tags         String[] @default([])
+  createdAt    DateTime @default(now())
+}

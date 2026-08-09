@@ -23,22 +23,22 @@
 }
 
 [data-theme="light"] {
-    --bg: #fdf2f8;
+    --bg: #f8fafc;
     --bg-secondary: #ffffff;
-    --sidebar-bg: #fce7f3;
-    --text-primary: #4a044e;
-    --text-secondary: #701a75;
-    --text-muted: #9d174d;
-    --accent: #db2777;
-    --accent-hover: #be185d;
-    --accent-tint: rgba(219, 39, 119, 0.15);
+    --sidebar-bg: #ffffff;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --accent: #0284c7;
+    --accent-hover: #0369a1;
+    --accent-tint: rgba(2, 132, 199, 0.15);
     --card-bg: #ffffff;
-    --card-border: #fbcfe8;
-    --card-hover-bg: #fdf2f8;
-    --nav-line: #fbcfe8;
-    --nav-line-active: #db2777;
-    --tag-bg: rgba(219, 39, 119, 0.1);
-    --tag-text: #db2777;
+    --card-border: #e2e8f0;
+    --card-hover-bg: #f1f5f9;
+    --nav-line: #cbd5e1;
+    --nav-line-active: #0284c7;
+    --tag-bg: rgba(236, 72, 153, 0.1);
+    --tag-text: #ec4899;
 }
 
 /* ─── Reset ───────────────────────────────────────────────────────────────── */
@@ -69,7 +69,8 @@ body {
     position: fixed;
     top: 24px;
     right: 24px;
-    z-index: 999;
+    z-index: 9999;
+    pointer-events: auto;
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -84,6 +85,7 @@ body {
     text-decoration: none;
     transition: 0.2s;
     box-shadow: 0 4px 16px rgba(244, 114, 182, 0.25);
+    -webkit-tap-highlight-color: transparent;
 }
 
 .admin-floating-badge:hover {
@@ -267,6 +269,65 @@ body {
 .sidebar-socials a:hover {
     color: var(--accent);
     transform: translateY(-3px);
+}
+
+/* ─── Mobile Hero (Brittany Chiang style) ─────────────────────────────────── */
+
+.social-links {
+    position: relative;
+    z-index: 10;
+    pointer-events: auto;
+    display: flex;
+    gap: 1.25rem;
+    margin: 1.5rem 0 2rem;
+}
+
+.social-links a {
+    font-size: 1.6rem;
+    color: var(--text-secondary);
+    transition: color 0.2s;
+}
+
+.social-links a:hover {
+    color: var(--accent);
+}
+
+.mobile-hero {
+    display: none;
+}
+
+@media (max-width: 1024px) {
+    .mobile-hero {
+        display: block;
+        padding: 1.25rem 0 1rem;
+    }
+
+    .mobile-hero .hero-name {
+        font-size: 2.4rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        letter-spacing: -0.5px;
+        line-height: 1.15;
+    }
+
+    .mobile-hero .hero-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--accent);
+        margin-top: 0.5rem;
+    }
+
+    .mobile-hero .hero-bio {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        margin-top: 1rem;
+        line-height: 1.7;
+    }
+
+    /* sediakan blok profil statis di atas section ABOUT, sembunyikan dari sidebar hamburger */
+    #about {
+        padding-top: 0;
+    }
 }
 
 /* ─── Theme Toggle ────────────────────────────────────────────────────────── */
@@ -1218,6 +1279,12 @@ body {
 @media (max-width: 1024px) {
     :root {
         --sidebar-width: 300px;
+    }
+
+    /* Blok hero profil ditampilkan statis di atas halaman, sembunyikan dari sidebar hamburger */
+    .sidebar .sidebar-top,
+    .sidebar .sidebar-socials {
+        display: none;
     }
 
     .hamburger {

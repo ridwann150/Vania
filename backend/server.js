@@ -137,7 +137,7 @@ async function uploadFilesToSupabase(files) {
     return urls;
 }
 
-// Regex untuk memvalidasi format UUID (karena id Project adalah UUID)
+// Regex untuk memvalidasi format UUID (karena id Project/Experience adalah UUID)
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Middleware untuk mengecek apakah :id adalah UUID yang valid
@@ -147,6 +147,16 @@ app.use('/api/projects/:id', (req, res, next) => {
         return res.status(404).json({
             success: false,
             message: "Project not found."
+        });
+    }
+    next();
+});
+
+app.use('/api/experiences/:id', (req, res, next) => {
+    if (!UUID_PATTERN.test(req.params.id)) {
+        return res.status(404).json({
+            success: false,
+            message: "Experience not found."
         });
     }
     next();
@@ -363,6 +373,165 @@ app.delete('/api/projects/:id', async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Failed to delete project."
+        });
+    }
+});
+
+// ─── Experience CRUD ──────────────────────────────────────────────────────────
+
+// Normalisasi payload experience dari frontend (mendukung dua bentuk kolom:
+// role/organization/period/tags yang dikirim project-form.js, dan bentuk PRD
+// role_title/organization/start_date/end_date/is_current).
+function normalizeExperience(body) {
+    const toArray = (val) => {
+        if (Array.isArray(val)) return val;
+        if (typeof val === 'string') return val.split(',').map(t => t.trim()).filter(Boolean);
+        return [];
+    };
+
+    return {
+        type: body.type || 'work',
+        role_title: body.role_title || body.role || '',
+        organization: body.organization || body.org || '',
+        period: body.period || '',
+        start_date: body.start_date || '',
+        end_date: body.end_date || '',
+        is_current: body.is_current === undefined ? false : !!body.is_current,
+        description: body.description || '',
+        technologies: toArray(body.technologies || body.tags)
+    };
+}
+
+// GET /api/experiences - Mengambil semua experience dari database
+app.get('/api/experiences', async (req, res) => {
+    try {
+        const experiences = await prisma.experience.findMany({
+            orderBy: { createdAt: 'desc' }
+        });
+        res.json({
+            success: true,
+            data: experiences
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch experiences."
+        });
+    }
+});
+
+// GET /api/experiences/:id - Mengambil satu experience berdasarkan id
+app.get('/api/experiences/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const experience = await prisma.experience.findUnique({
+            where: { id }
+        });
+
+        if (!experience) {
+            return res.status(404).json({
+                success: false,
+                message: "Experience not found."
+            });
+        }
+
+        res.json({
+            success: true,
+            data: experience
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch experience."
+        });
+    }
+});
+
+// POST /api/experiences - Menambah experience baru
+app.post('/api/experiences', async (req, res) => {
+    try {
+        const data = normalizeExperience(req.body);
+
+        if (!data.role_title || !data.organization) {
+            return res.status(400).json({
+                success: false,
+                message: "Role and organization are required."
+            });
+        }
+
+        const newExperience = await prisma.experience.create({ data });
+
+        res.status(201).json({
+            success: true,
+            data: newExperience
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to create experience."
+        });
+    }
+});
+
+// PUT /api/experiences/:id - Memperbarui experience yang sudah ada
+app.put('/api/experiences/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const data = normalizeExperience(req.body);
+
+        const existing = await prisma.experience.findUnique({ where: { id } });
+        if (!existing) {
+            return res.status(404).json({
+                success: false,
+                message: "Experience not found."
+            });
+        }
+
+        const updatedExperience = await prisma.experience.update({
+            where: { id },
+            data
+        });
+
+        res.json({
+            success: true,
+            data: updatedExperience
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to update experience."
+        });
+    }
+});
+
+// DELETE /api/experiences/:id - Menghapus experience berdasarkan id
+app.delete('/api/experiences/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const existing = await prisma.experience.findUnique({ where: { id } });
+        if (!existing) {
+            return res.status(404).json({
+                success: false,
+                message: "Experience not found."
+            });
+        }
+
+        await prisma.experience.delete({ where: { id } });
+
+        res.json({
+            success: true,
+            message: "Experience deleted successfully."
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to delete experience."
         });
     }
 });

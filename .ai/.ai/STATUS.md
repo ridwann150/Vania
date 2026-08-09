@@ -22,10 +22,18 @@
 - Footer text: "© 2026 MHD Ridwan Maulana. All rights reserved."
 - **Local-only persistence**: All admin saves now store to localStorage (va_about, va_experiences, va_projects) and display "Data Berhasil Disimpan!" message (auto-clears 3s)
 - index.html loads About (sidebar + body), Experience list, and Projects from localStorage first, then syncs with Vercel API if online
-- Project manage list never shows "Failed to load"; falls back to dummy projects if no stored/API data
+- Project manage list shows real data (localStorage first, then API); shows empty state if no data (no dummy fallback)
 - Project edit/delete fully functional from localStorage (works offline on Live Server)
 - Removed all horizontal border separators (border-top/border-bottom) on .section & .site-footer
 - Section headers (h2.section-title): ABOUT/EXPERIENCE/PROJECTS/CONTACT — hidden on desktop, shown on mobile
 - Footer centered (`text-align:center; width:100%; margin:3rem auto 1rem;`) on all pages
 - **Persistent Admin Navigation**: Floating "⚙️ Back to Dashboard" badge on index.html (pink accent, dark) — shows only when `isLoggedIn==='true'` or `adminToken` exists in localStorage; hidden for public visitors. Clicking opens project-form.html (session preserved via localStorage)
 - Admin "Preview Web" button opens index.html normally (localStorage auth persists across tabs)
+- **Admin dashboard logic moved to `project-form.js`** (loaded after `script.js` on project-form.html); script.js kept only public + shared helpers (theme, spotlight, hamburger, lightbox, auth, public profile/projects, CV, login, logout)
+- **Mobile hero (Brittany Chiang style)**: `.mobile-hero` block (name, title, short bio, `.social-links` Instagram + Email) rendered statically at top of main content on mobile; sidebar-top/sidebar-socials hidden from hamburger sidebar on mobile
+- **`.social-links` tap-friendly styling**: `position:relative; z-index:10; pointer-events:auto; display:flex; gap:1.25rem; margin:1.5rem 0 2rem` with 1.6rem icons
+- **Admin floating badge**: z-index 9999 + `pointer-events:auto` so it stays clickable above hamburger overlay on mobile
+- **Light mode re-themed** (Slate Soft / Cyan): bg `#f8fafc`, primary text `#0f172a`, card/container `#ffffff`, primary accent `#0284c7`, tag secondary accent `#ec4899`
+- **No more dummy/fallback data**: `renderFallbackProjects` replaced with `renderEmptyProjects`; admin project list shows empty state instead of dummy projects
+- **Full sync DELETE**: Delete button sends HTTP DELETE to `DELETE /api/experiences/:id` and `/api/projects/:id`, removes item from localStorage, clears frontend memory, and re-renders list
+- **Backend Experience CRUD**: Added `Experience` model to `prisma/schema.prisma` (type, role_title, organization, period, start_date, end_date, description, technologies, is_current, tags); `prisma db push` applied to Supabase. Added `/api/experiences` GET/POST/PUT/DELETE + UUID guard in `server.js` (normalizes frontend `role`/`org`/`period`/`tags` payload). CRUD verified end-to-end against local dev server.
