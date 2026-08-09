@@ -133,10 +133,12 @@ function setLoggedIn(value) {
 
 (function syncAdminBadge() {
     var badge = document.getElementById("adminBadge");
-    if (!badge) return;
+    var drawerAdmin = document.getElementById("adminNavLink");
+    if (!badge && !drawerAdmin) return;
     function updateBadge() {
         var loggedIn = localStorage.getItem(AUTH_KEY) === "true" || !!localStorage.getItem("adminToken");
-        badge.hidden = !loggedIn;
+        if (badge) badge.hidden = !loggedIn;
+        if (drawerAdmin) drawerAdmin.hidden = !loggedIn;
     }
     updateBadge();
     window.addEventListener("storage", updateBadge);
@@ -277,7 +279,9 @@ initLightbox();
 // ─── Public Projects ──────────────────────────────────────────────────────────
 
 var projectsGrid = document.getElementById("projectsGrid");
-if (projectsGrid) {
+
+function loadPublicProjects() {
+    if (!projectsGrid) return;
     projectsGrid.innerHTML = '<p class="empty-list">Loading projects...</p>';
 
     var _localProjects = lsGet(LS_KEYS.projects);
@@ -303,6 +307,8 @@ if (projectsGrid) {
             }
         });
 }
+
+if (projectsGrid) loadPublicProjects();
 
 function renderProjectCards(saved) {
     if (!projectsGrid) return;
@@ -593,6 +599,15 @@ if (loginForm) {
 // ─── Public Profile (About + Experience) ──────────────────────────────────────
 
 loadPublicProfile();
+
+// Muat ulang data segar saat kembali ke halaman (mis. dari bfcache mobile),
+// agar hasil edit admin langsung terlihat di mobile maupun desktop.
+window.addEventListener("pageshow", function (e) {
+    if (e.persisted) {
+        loadPublicProfile();
+        loadPublicProjects();
+    }
+});
 
 // ─── Logout ───────────────────────────────────────────────────────────────────
 

@@ -230,6 +230,15 @@ body {
     group: true;
 }
 
+/* Admin entry hanya muncul di dalam drawer (hamburger) mobile */
+.admin-nav-link {
+    display: none;
+}
+
+.admin-nav-link[hidden] {
+    display: none;
+}
+
 .nav-line {
     display: block;
     width: 32px;
@@ -1298,6 +1307,15 @@ body {
     .sidebar .sidebar-top,
     .sidebar .social-links {
         display: none;
+    }
+
+    /* Admin masuk ke dalam drawer (hamburger), floating badge di mobile disembunyikan */
+    .admin-nav-link {
+        display: flex;
+    }
+
+    .admin-floating-badge {
+        display: none !important;
     }
 
     .hamburger {
