@@ -148,26 +148,6 @@ function setLoggedIn(value) {
     window.addEventListener("storage", updateBadge);
 })();
 
-// ─── localStorage helpers ─────────────────────────────────────────────────────
-
-var LS_KEYS = {
-    about: "va_about",
-    experiences: "va_experiences",
-    projects: "va_projects"
-};
-
-function lsGet(key) {
-    try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; }
-}
-
-function lsSet(key, value) {
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
-}
-
-function lsRemove(key) {
-    try { localStorage.removeItem(key); } catch (e) {}
-}
-
 // ─── HTML escape helper ───────────────────────────────────────────────────────
 
 function escapeHtml(text) {
@@ -288,14 +268,13 @@ function loadPublicProjects() {
     if (!projectsGrid) return;
     projectsGrid.innerHTML = '<p class="empty-list">Loading projects...</p>';
 
-    fetch(API_BASE_URL + "/projects", { cache: "no-store" })
+    fetch(API_BASE_URL + "/projects", { cache: "no-store", headers: { "Pragma": "no-cache", "Cache-Control": "no-cache, no-store" } })
         .then(function (response) {
             if (!response.ok) throw new Error("projects fetch failed");
             return response.json();
         })
         .then(function (result) {
             var saved = result.data || [];
-            lsSet(LS_KEYS.projects, saved);
             projectsGrid.innerHTML = "";
             if (saved.length === 0) {
                 renderEmptyProjects();
@@ -305,12 +284,7 @@ function loadPublicProjects() {
         })
         .catch(function () {
             projectsGrid.innerHTML = "";
-            var _localProjects = lsGet(LS_KEYS.projects);
-            if (_localProjects && _localProjects.length > 0) {
-                renderProjectCards(_localProjects);
-            } else {
-                renderEmptyProjects();
-            }
+            renderEmptyProjects();
         });
 }
 
@@ -391,7 +365,6 @@ function renderEmptyProjects() {
 
 function loadPublicProfile() {
     var aboutBodyEl = document.getElementById("aboutBody");
-    var expListEl = document.getElementById("experienceList");
 
     function renderProfileData(data) {
         var name = data.full_name || "";
@@ -416,8 +389,27 @@ function loadPublicProfile() {
         }
     }
 
+    // ── Fetch fresh About/Profile from API (single source of truth, no cache) ─
+    fetch(API_BASE_URL + "/profile", { cache: "no-store", headers: { "Pragma": "no-cache", "Cache-Control": "no-cache, no-store" } })
+        .then(function (res) {
+            if (!res.ok) throw new Error("profile fetch failed");
+            return res.json();
+        })
+        .then(function (result) {
+            renderProfileData(result.data || {});
+        })
+        .catch(function () {
+            if (aboutBodyEl) {
+                aboutBodyEl.innerHTML = '<p class="empty-list">No about content to display yet.</p>';
+            }
+        });
+}
+
+function loadPublicExperiences() {
+    var expListEl = document.getElementById("experienceList");
+    if (!expListEl) return;
+
     function renderExperienceList(exps) {
-        if (!expListEl) return;
         if (exps && exps.length > 0) {
             expListEl.innerHTML = exps.map(renderExpCard).join("");
         } else {
@@ -425,48 +417,18 @@ function loadPublicProfile() {
         }
     }
 
-    // ── Fetch fresh About/Experience from API (single source of truth) ──────
-    // Hanya membaca localStorage jika API offline/gagal. Jika backend 200 OK,
-    // data Supabase SELALU menang sehingga Mobile & Desktop identik.
-    fetch(API_BASE_URL + "/profile", { cache: "no-store" })
+    // ── Fetch fresh Experience from API (single source of truth, no cache) ──
+    fetch(API_BASE_URL + "/experiences", { cache: "no-store", headers: { "Pragma": "no-cache", "Cache-Control": "no-cache, no-store" } })
         .then(function (res) {
-            if (!res.ok) throw new Error("profile fetch failed");
+            if (!res.ok) throw new Error("experiences fetch failed");
             return res.json();
         })
         .then(function (result) {
-            var d = result.data || {};
-            lsSet(LS_KEYS.about, d);
-            renderProfileData(d);
+            renderExperienceList(result.data || []);
         })
         .catch(function () {
-            var _localAbout = lsGet(LS_KEYS.about);
-            if (_localAbout) {
-                renderProfileData(_localAbout);
-            } else if (aboutBodyEl) {
-                aboutBodyEl.innerHTML = '<p class="empty-list">No about content to display yet.</p>';
-            }
+            renderExperienceList([]);
         });
-
-    if (expListEl) {
-        fetch(API_BASE_URL + "/experiences", { cache: "no-store" })
-            .then(function (res) {
-                if (!res.ok) throw new Error("experiences fetch failed");
-                return res.json();
-            })
-            .then(function (result) {
-                var exps = result.data || [];
-                lsSet(LS_KEYS.experiences, exps);
-                renderExperienceList(exps);
-            })
-            .catch(function () {
-                var _localExps = lsGet(LS_KEYS.experiences);
-                if (_localExps && _localExps.length > 0) {
-                    renderExperienceList(_localExps);
-                } else {
-                    renderExperienceList([]);
-                }
-            });
-    }
 }
 
 function renderExpCard(exp) {
@@ -606,12 +568,14 @@ if (loginForm) {
 // ─── Public Profile (About + Experience) ──────────────────────────────────────
 
 loadPublicProfile();
+loadPublicExperiences();
 
 // Muat ulang data segar saat kembali ke halaman (mis. dari bfcache mobile),
 // agar hasil edit admin langsung terlihat di mobile maupun desktop.
 window.addEventListener("pageshow", function (e) {
     if (e.persisted) {
         loadPublicProfile();
+        loadPublicExperiences();
         loadPublicProjects();
     }
 });
