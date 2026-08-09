@@ -11,10 +11,9 @@ datasource db {
   provider = "postgresql"
 }
 
-// Model-model di bawah ini dipetakan (@@map) persis ke tabel yang sudah ada
-// di Supabase (casing huruf besarnya dipertahankan). Nama kolom API mengikuti
-// nama kolom fisik di database (camelCase). Jangan ubah ke huruf kecil karena
-// tabel fisiknya bernama `Profile`, `Experience`, dan `Project`.
+// Model Prisma persis dengan nama tabel di Supabase (`Profile`, `Experience`,
+// `Project`), jadi tanpa perlu @@map. Nama kolom mengikuti nama kolom fisik
+// di database (camelCase).
 
 model Profile {
   id        String   @id @default(uuid())
@@ -23,8 +22,6 @@ model Profile {
   bio       String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  @@map("Profile")
 }
 
 model Experience {
@@ -36,8 +33,6 @@ model Experience {
   skills      String[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
-  @@map("Experience")
 }
 
 model Project {
@@ -49,6 +44,4 @@ model Project {
   techStack   String[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
-  @@map("Project")
 }
