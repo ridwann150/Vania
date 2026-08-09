@@ -134,11 +134,15 @@ function setLoggedIn(value) {
 (function syncAdminBadge() {
     var badge = document.getElementById("adminBadge");
     var drawerAdmin = document.getElementById("adminNavLink");
+    var drawerAdminLabel = document.getElementById("adminNavLabel");
     if (!badge && !drawerAdmin) return;
     function updateBadge() {
         var loggedIn = localStorage.getItem(AUTH_KEY) === "true" || !!localStorage.getItem("adminToken");
         if (badge) badge.hidden = !loggedIn;
-        if (drawerAdmin) drawerAdmin.hidden = !loggedIn;
+        if (drawerAdmin) {
+            drawerAdmin.href = loggedIn ? "project-form.html" : "login.html";
+            if (drawerAdminLabel) drawerAdminLabel.textContent = loggedIn ? "⚙️ Admin Dashboard" : "🔒 Admin Login";
+        }
     }
     updateBadge();
     window.addEventListener("storage", updateBadge);
@@ -384,22 +388,25 @@ function renderEmptyProjects() {
 // ─── Public Profile (About + Experience) ──────────────────────────────────────
 
 function loadPublicProfile() {
-    var sidebarNameEl = document.getElementById("sidebarName");
-    var sidebarTitleEl = document.getElementById("sidebarTitle");
-    var sidebarTaglineEl = document.getElementById("sidebarTagline");
     var aboutBodyEl = document.getElementById("aboutBody");
     var expListEl = document.getElementById("experienceList");
-    var mobileHeroNameEl = document.getElementById("mobileHeroName");
-    var mobileHeroTitleEl = document.getElementById("mobileHeroTitle");
-    var mobileHeroBioEl = document.getElementById("mobileHeroBio");
 
     function applyProfile(d) {
-        if (sidebarNameEl) sidebarNameEl.textContent = d.full_name || sidebarNameEl.textContent;
-        if (sidebarTitleEl) sidebarTitleEl.textContent = d.title || "";
-        if (sidebarTaglineEl) sidebarTaglineEl.textContent = d.bio || "";
-        if (mobileHeroNameEl) mobileHeroNameEl.textContent = d.full_name || mobileHeroNameEl.textContent;
-        if (mobileHeroTitleEl) mobileHeroTitleEl.textContent = d.title || "";
-        if (mobileHeroBioEl) mobileHeroBioEl.textContent = d.bio || "";
+        var name = d.full_name || "";
+        var tagline = d.title || "";
+        var bio = d.bio || "";
+
+        // Update elemen desktop (sidebar) DAN mobile hero secara bersamaan.
+        document.querySelectorAll(".profile-name, #mobile-name, #profile-name, [data-profile-name]").forEach(function (el) {
+            if (name) el.textContent = name;
+        });
+        document.querySelectorAll(".profile-tagline, #mobile-tagline, #profile-tagline, [data-profile-tagline]").forEach(function (el) {
+            el.textContent = tagline;
+        });
+        document.querySelectorAll(".profile-bio, #mobile-bio, #profile-bio, [data-profile-bio]").forEach(function (el) {
+            el.textContent = bio;
+        });
+
         if (aboutBodyEl && d.about_me) {
             aboutBodyEl.innerHTML = (d.about_me || "").split("\n").filter(Boolean).map(function (p) {
                 return '<p>' + escapeHtml(p) + '</p>';
