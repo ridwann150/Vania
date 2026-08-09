@@ -111,32 +111,92 @@ export async function buildCvPdf({ profile = {}, experiences = [], projects = []
         y -= FONT_SIZE_SUB * LINE_HEIGHT;
     }
 
-    // ── Section heading dengan garis bawah ──
+    // ── Section heading (Bold & Uppercase, tanpa garis bawah) ──
     function drawHeading(text) {
         ensureSpace(FONT_SIZE_HEADING + 14);
         y -= 6;
         const upper = String(text).toUpperCase();
         page.drawText(upper, { x: MARGIN_LEFT, y, size: FONT_SIZE_HEADING, font: fontBold, color: BLACK });
-        const hw = fontBold.widthOfTextAtSize(upper, FONT_SIZE_HEADING);
-        page.drawLine({
-            start: { x: MARGIN_LEFT, y: y - 3 },
-            end: { x: MARGIN_LEFT + Math.max(hw, 120), y: y - 3 },
-            thickness: 0.8,
-            color: BLACK
-        });
         y -= FONT_SIZE_HEADING * LINE_HEIGHT + 5;
     }
 
+    // Gambar teks rata kiri-kanan (justify): ruang ekstra didistribusikan
+    // merata di antara kata sehingga baris rata dengan margin kanan.
+    function drawJustifiedLine(words, font, size, xStart, maxWidth) {
+        const widths = words.map((w) => font.widthOfTextAtSize(w, size));
+        const total = widths.reduce((a, b) => a + b, 0);
+        const spaceW = font.widthOfTextAtSize(' ', size);
+        let cx = xStart;
+        words.forEach((w, i) => {
+            page.drawText(w, { x: cx, y, size, font, color: BLACK });
+            if (i < words.length - 1) cx += widths[i] + spaceW;
+        });
+    }
+
+    // Gambar beberapa baris; semua baris kecuali baris terakhir dirata
+    // kanan-kiri (justify), baris terakhir rata kiri.
+    function drawJustifiedParagraphLines(text, font = fontReg, size = FONT_SIZE_BODY, maxWidth = CONTENT_W, xStart = MARGIN_LEFT, isLastLine = false) {
+        const lines = wrapText(text, font, size, maxWidth);
+        const lastIdx = lines.length - 1;
+        for (let li = 0; li < lines.length; li++) {
+            ensureSpace(size * LINE_HEIGHT);
+            const words = lines[li].split(' ');
+            if (li < lastIdx && !isLastLine) {
+                // justify: distribusikan ruang ekstra antar kata
+                const widths = words.map((w) => font.widthOfTextAtSize(w, size));
+                const total = widths.reduce((a, b) => a + b, 0);
+                const gaps = words.length - 1;
+                let extra = maxWidth - total;
+                let cx = xStart;
+                if (gaps > 0 && extra > 0) {
+                    const gapExtra = extra / gaps;
+                    words.forEach((w, i) => {
+                        page.drawText(w, { x: cx, y, size, font, color: BLACK });
+                        if (i < words.length - 1) cx += widths[i] + gapExtra;
+                    });
+                } else {
+                    drawJustifiedLine(words, font, size, xStart, maxWidth);
+                }
+            } else {
+                // Baris terakhir / kata tunggal: rata kiri
+                drawJustifiedLine(words, font, size, xStart, maxWidth);
+            }
+            y -= size * LINE_HEIGHT;
+        }
+        return lines.length;
+    }
+
+    // Gambar paragraf rata kanan-kiri penuh (Summary & deskripsi).
     function drawParagraphLines(text, font = fontReg, size = FONT_SIZE_BODY, bullet = '') {
         const lines = wrapText(text, font, size, CONTENT_W);
-        for (const ln of lines) {
+        const lastIdx = lines.length - 1;
+        for (let li = 0; li < lines.length; li++) {
             ensureSpace(size * LINE_HEIGHT);
             const prefix = bullet ? bullet + '  ' : '';
-            page.drawText(prefix, { x: MARGIN_LEFT, y, size, font: fontBold, color: BLACK });
+            const xStart = bullet ? MARGIN_LEFT + 14 : MARGIN_LEFT;
+            const maxWidth = bullet ? CONTENT_W - 14 : CONTENT_W;
             if (bullet) {
-                page.drawText(ln, { x: MARGIN_LEFT + 14, y, size, font, color: BLACK });
+                page.drawText(prefix, { x: MARGIN_LEFT, y, size, font: fontBold, color: BLACK });
+            }
+            const words = lines[li].split(' ');
+            if (li < lastIdx && words.length > 1) {
+                // justify baris (kecuali baris terakhir)
+                const widths = words.map((w) => font.widthOfTextAtSize(w, size));
+                const total = widths.reduce((a, b) => a + b, 0);
+                const gaps = words.length - 1;
+                let extra = maxWidth - total;
+                let cx = xStart;
+                if (gaps > 0 && extra > 0) {
+                    const gapExtra = extra / gaps;
+                    words.forEach((w, i) => {
+                        page.drawText(w, { x: cx, y, size, font, color: BLACK });
+                        if (i < words.length - 1) cx += widths[i] + gapExtra;
+                    });
+                } else {
+                    drawJustifiedLine(words, font, size, xStart, maxWidth);
+                }
             } else {
-                page.drawText(ln, { x: MARGIN_LEFT, y, size, font, color: BLACK });
+                drawJustifiedLine(words, font, size, xStart, maxWidth);
             }
             y -= size * LINE_HEIGHT;
         }
