@@ -33,14 +33,19 @@
     var aboutForm = document.getElementById("aboutForm");
     if (aboutForm) {
         // Selalu ambil dari API (Supabase). Tanpa cache/localStorage.
-        fetch(API_BASE_URL + "/profile", {
-            cache: "no-store",
-            headers: getAuthHeaders()
-        })
-            .then(function (res) {
-                if (!res.ok) throw new Error("profile fetch failed");
-                return res.json();
-            })
+        // Fallback otomatis bila /api/profile 404: coba /api/about lalu /api/user.
+        var profileCandidates = ["/profile", "/about", "/user"];
+        function fetchProfileForAdmin(idx) {
+            if (idx >= profileCandidates.length) return Promise.reject(new Error("all profile endpoints failed"));
+            return fetch(API_BASE_URL + profileCandidates[idx], { cache: "no-store", headers: getAuthHeaders() })
+                .then(function (res) {
+                    if (res.status === 404) return fetchProfileForAdmin(idx + 1);
+                    if (!res.ok) throw new Error("profile fetch failed (" + res.status + ")");
+                    return res.json();
+                });
+        }
+
+        fetchProfileForAdmin(0)
             .then(function (result) {
                 var d = result.data || {};
                 document.getElementById("aboutName").value = d.full_name || "";
@@ -64,7 +69,8 @@
                 headers: Object.assign({}, getAuthHeaders(), { "Content-Type": "application/json" }),
                 body: JSON.stringify(payload)
             })
-            .then(function () {
+            .then(function (res) {
+                if (!res.ok) throw new Error("profile update failed (" + res.status + ")");
                 clearPublicCacheOnly();
                 msg.textContent = "Data Berhasil Disimpan!";
                 msg.className = "form-message success";
@@ -148,7 +154,8 @@
                 headers: Object.assign({}, getAuthHeaders(), { "Content-Type": "application/json" }),
                 body: JSON.stringify(payload)
             })
-            .then(function () {
+            .then(function (res) {
+                if (!res.ok) throw new Error("experience submit failed (" + res.status + ")");
                 clearPublicCacheOnly();
                 msg.textContent = "Data Berhasil Disimpan!";
                 msg.className = "form-message success";
@@ -194,7 +201,10 @@
                 if (editBtn) {
                     var id = editBtn.getAttribute("data-exp-edit");
                     fetch(API_BASE_URL + "/experiences", { cache: "no-store", headers: getAuthHeaders() })
-                        .then(function (res) { return res.json(); })
+                        .then(function (res) {
+                            if (!res.ok) throw new Error("experiences fetch failed (" + res.status + ")");
+                            return res.json();
+                        })
                         .then(function (result) {
                             var exp = (result.data || []).find(function (x) { return String(x.id) === String(id); });
                             if (exp) fillExpForm(exp);
@@ -426,7 +436,10 @@
             var isEdit = !!editId;
             var url = isEdit ? API_BASE_URL + "/projects/" + editId : API_BASE_URL + "/projects";
             fetch(url, { method: isEdit ? "PUT" : "POST", body: formData, headers: getAuthHeaders() })
-                .then(function (res) { return res.json().catch(function () { return {}; }); })
+                .then(function (res) {
+                    if (!res.ok) throw new Error("project save failed (" + res.status + ")");
+                    return res.json().catch(function () { return {}; });
+                })
                 .then(function (resData) {
                     clearPublicCacheOnly();
                     resetProjectForm();
@@ -461,7 +474,10 @@
                     var pid = thumb.getAttribute("data-project-id");
                     var startIdx = parseInt(thumb.getAttribute("data-img-index"), 10);
                     fetch(API_BASE_URL + "/projects", { cache: "no-store", headers: getAuthHeaders() })
-                        .then(function (res) { return res.json(); })
+                        .then(function (res) {
+                            if (!res.ok) throw new Error("projects fetch failed (" + res.status + ")");
+                            return res.json();
+                        })
                         .then(function (result) {
                             var proj = (result.data || []).find(function (p) { return String(p.id) === String(pid); });
                             if (proj && proj.images && proj.images.length > 0) openLightbox(proj.images, startIdx, proj.title);
@@ -473,7 +489,10 @@
                 if (editBtn) {
                     var id = editBtn.getAttribute("data-edit");
                     fetch(API_BASE_URL + "/projects", { cache: "no-store", headers: getAuthHeaders() })
-                        .then(function (res) { return res.json(); })
+                        .then(function (res) {
+                            if (!res.ok) throw new Error("projects fetch failed (" + res.status + ")");
+                            return res.json();
+                        })
                         .then(function (result) {
                             var projEdit = (result.data || []).find(function (p) { return String(p.id) === String(id); });
                             if (projEdit) fillFormForEdit(projEdit);

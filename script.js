@@ -303,8 +303,6 @@ function loadPublicProjects() {
         });
 }
 
-if (projectsGrid) loadPublicProjects();
-
 function renderProjectCards(saved) {
     if (!projectsGrid) return;
     saved.forEach(function (project, idx) {
@@ -405,11 +403,19 @@ function loadPublicProfile() {
     }
 
     // ── Fetch fresh About/Profile from API (single source of truth, no cache) ─
-    fetch(API_BASE_URL + "/profile", { cache: "no-store", headers: { "Pragma": "no-cache", "Cache-Control": "no-cache, no-store" } })
-        .then(function (res) {
-            if (!res.ok) throw new Error("profile fetch failed");
-            return res.json();
-        })
+    // Fallback otomatis: bila /api/profile 404, coba /api/about lalu /api/user.
+    var profileCandidates = ["/profile", "/about", "/user"];
+    function profileFetch(idx) {
+        if (idx >= profileCandidates.length) return Promise.reject(new Error("all profile endpoints failed"));
+        return fetch(API_BASE_URL + profileCandidates[idx], { cache: "no-store", headers: { "Pragma": "no-cache", "Cache-Control": "no-cache, no-store" } })
+            .then(function (response) {
+                if (response.status === 404) return profileFetch(idx + 1);
+                if (!response.ok) throw new Error("profile fetch failed (" + response.status + ")");
+                return response.json();
+            });
+    }
+
+    profileFetch(0)
         .then(function (result) {
             renderProfileData(result.data || {});
         })
@@ -582,16 +588,23 @@ if (loginForm) {
 
 // ─── Public Profile (About + Experience) ──────────────────────────────────────
 
-loadPublicProfile();
-loadPublicExperiences();
+// Muat semua data publik secara independen (Promise.allSettled) sehingga
+// kegagalan salah satu endpoint (mis. profile 404) tidak menghentikan yang lain.
+function loadAllPublicData() {
+    Promise.allSettled([
+        Promise.resolve().then(loadPublicProfile),
+        Promise.resolve().then(loadPublicExperiences),
+        Promise.resolve().then(loadPublicProjects)
+    ]);
+}
+
+loadAllPublicData();
 
 // Muat ulang data segar saat kembali ke halaman (mis. dari bfcache mobile),
 // agar hasil edit admin langsung terlihat di mobile maupun desktop.
 window.addEventListener("pageshow", function (e) {
     if (e.persisted) {
-        loadPublicProfile();
-        loadPublicExperiences();
-        loadPublicProjects();
+        loadAllPublicData();
     }
 });
 
