@@ -250,28 +250,12 @@ body {
     background-color: var(--nav-line-active);
 }
 
-/* ─── Sidebar Socials ─────────────────────────────────────────────────────── */
-
-.sidebar-socials {
-    display: flex;
-    gap: 18px;
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-.sidebar-socials a {
-    color: var(--text-secondary);
-    font-size: 20px;
-    text-decoration: none;
-    transition: color var(--transition), transform var(--transition);
-}
-
-.sidebar-socials a:hover {
-    color: var(--accent);
-    transform: translateY(-3px);
-}
-
 /* ─── Mobile Hero (Brittany Chiang style) ─────────────────────────────────── */
+
+.sidebar-bottom .social-links {
+    margin: 0;
+    width: fit-content;
+}
 
 .social-links {
     position: relative;
@@ -282,14 +266,43 @@ body {
     margin: 1.5rem 0 2rem;
 }
 
-.social-links a {
+.social-links a,
+.social-icon-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     font-size: 1.6rem;
     color: var(--text-secondary);
+    text-decoration: none;
     transition: color 0.2s;
 }
 
-.social-links a:hover {
+.social-links a:hover,
+.social-icon-link:hover {
     color: var(--accent);
+}
+
+@media (max-width: 768px) {
+    .social-links {
+        position: relative !important;
+        z-index: 9999 !important;
+        pointer-events: auto !important;
+        display: flex !important;
+        gap: 1.5rem !important;
+        margin-top: 1.25rem !important;
+    }
+
+    .social-links a,
+    .social-icon-link {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 10px !important;
+        font-size: 1.75rem !important;
+        pointer-events: auto !important;
+        touch-action: manipulation !important;
+        cursor: pointer !important;
+    }
 }
 
 .mobile-hero {
@@ -1283,7 +1296,7 @@ body {
 
     /* Blok hero profil ditampilkan statis di atas halaman, sembunyikan dari sidebar hamburger */
     .sidebar .sidebar-top,
-    .sidebar .sidebar-socials {
+    .sidebar .social-links {
         display: none;
     }
 

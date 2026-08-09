@@ -158,6 +158,10 @@ function lsSet(key, value) {
     try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
 }
 
+function lsRemove(key) {
+    try { localStorage.removeItem(key); } catch (e) {}
+}
+
 // ─── HTML escape helper ───────────────────────────────────────────────────────
 
 function escapeHtml(text) {
@@ -278,15 +282,11 @@ if (projectsGrid) {
 
     var _localProjects = lsGet(LS_KEYS.projects);
 
-    fetch(API_BASE_URL + "/projects")
+    fetch(API_BASE_URL + "/projects", { cache: "no-store" })
         .then(function (response) { return response.json(); })
         .then(function (result) {
             var saved = result.data || [];
-            if (saved.length > 0) {
-                lsSet(LS_KEYS.projects, saved);
-            } else {
-                saved = _localProjects || [];
-            }
+            lsSet(LS_KEYS.projects, saved);
             projectsGrid.innerHTML = "";
             if (saved.length === 0) {
                 renderEmptyProjects();
@@ -386,8 +386,6 @@ function loadPublicProfile() {
     var mobileHeroNameEl = document.getElementById("mobileHeroName");
     var mobileHeroTitleEl = document.getElementById("mobileHeroTitle");
     var mobileHeroBioEl = document.getElementById("mobileHeroBio");
-    var aboutLoaded = false;
-    var expLoaded = false;
 
     function applyProfile(d) {
         if (sidebarNameEl) sidebarNameEl.textContent = d.full_name || sidebarNameEl.textContent;
@@ -403,48 +401,58 @@ function loadPublicProfile() {
         }
     }
 
-    // --- Load About from localStorage first ---
-    var _localAbout = lsGet(LS_KEYS.about);
-    if (_localAbout) {
-        applyProfile(_localAbout);
-        aboutLoaded = true;
+    function renderExperienceList(exps) {
+        if (!expListEl) return;
+        if (exps && exps.length > 0) {
+            expListEl.innerHTML = exps.map(renderExpCard).join("");
+        } else {
+            expListEl.innerHTML = '<p class="empty-list">No experience to display yet.</p>';
+        }
     }
 
-    // --- Fetch About from API ---
-    fetch(API_BASE_URL + "/profile")
+    // --- Render localStorage as instant placeholder, refresh from API below ---
+    var _localAbout = lsGet(LS_KEYS.about);
+    var _didRenderAbout = false;
+    if (_localAbout) {
+        applyProfile(_localAbout);
+        _didRenderAbout = true;
+    }
+
+    var _localExps = lsGet(LS_KEYS.experiences);
+    if (_localExps && _localExps.length > 0 && expListEl) {
+        renderExperienceList(_localExps);
+    }
+
+    // --- Fetch fresh About from API (single source of truth, no cache) ---
+    fetch(API_BASE_URL + "/profile", { cache: "no-store" })
         .then(function (res) { return res.json(); })
         .then(function (result) {
             var d = result.data || {};
-            if (d.full_name) {
-                lsSet(LS_KEYS.about, d);
-                applyProfile(d);
-                aboutLoaded = true;
-            }
+            lsSet(LS_KEYS.about, d);
+            applyProfile(d);
+            // Clear stale localStorage so mobile & desktop read identical fresh data
+            if (!d.full_name) lsRemove(LS_KEYS.about);
         })
-        .catch(function () {});
+        .catch(function () {
+            if (!_didRenderAbout && aboutBodyEl) {
+                aboutBodyEl.innerHTML = '<p class="empty-list">No about content to display yet.</p>';
+            }
+        });
 
-    // --- Load Experience from localStorage first ---
-    var _localExps = lsGet(LS_KEYS.experiences);
-    if (_localExps && _localExps.length > 0 && expListEl) {
-        expListEl.innerHTML = _localExps.map(renderExpCard).join("");
-        expLoaded = true;
-    }
-
-    // --- Fetch Experience from API ---
+    // --- Fetch fresh Experience from API (single source of truth, no cache) ---
     if (expListEl) {
-        fetch(API_BASE_URL + "/experiences")
+        fetch(API_BASE_URL + "/experiences", { cache: "no-store" })
             .then(function (res) { return res.json(); })
             .then(function (result) {
-                var exps = (result.data || []).length > 0 ? result.data : [];
-                if (exps.length > 0) {
-                    lsSet(LS_KEYS.experiences, exps);
-                    expListEl.innerHTML = exps.map(renderExpCard).join("");
-                    expLoaded = true;
-                } else if (!expLoaded) {
-                    expListEl.innerHTML = '<p class="empty-list">No experience to display yet.</p>';
-                }
+                var exps = result.data || [];
+                lsSet(LS_KEYS.experiences, exps);
+                renderExperienceList(exps);
             })
-            .catch(function () {});
+            .catch(function () {
+                if (!_localExps || _localExps.length === 0) {
+                    renderExperienceList([]);
+                }
+            });
     }
 }
 
