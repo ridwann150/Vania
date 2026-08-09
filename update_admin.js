@@ -283,7 +283,7 @@ if (adminTabs.length > 0) {
                 document.getElementById("aboutName").value = data.full_name || "Vania Anggraini";
                 document.getElementById("aboutTagline").value = data.title || "Student Digital Business";
                 document.getElementById("aboutShort").value = data.bio || "Passionate about digital transformation...";
-                document.getElementById("aboutDetail").value = data.about_me || "Hi, I'm Vania Anggraini...";
+                document.getElementById("aboutDetail").value = data.about || data.about_me || "Hi, I'm Vania Anggraini...";
             }).catch(console.error);
 
         aboutForm.addEventListener("submit", (e) => {
@@ -292,7 +292,7 @@ if (adminTabs.length > 0) {
                 full_name: document.getElementById("aboutName").value,
                 title: document.getElementById("aboutTagline").value,
                 bio: document.getElementById("aboutShort").value,
-                about_me: document.getElementById("aboutDetail").value
+                about: document.getElementById("aboutDetail").value
             };
             fetch(API_BASE_URL + "/profile", {
                 method: "PUT",

@@ -390,15 +390,17 @@ function loadPublicProfile() {
         document.querySelectorAll("#profile-tagline, #mobile-tagline, .profile-tagline").forEach(function (el) {
             el.textContent = tagline;
         });
-        document.querySelectorAll("#profile-bio, #mobile-bio, .profile-bio").forEach(function (el) {
+
+        // SHORT BIO: hanya diisi ke elemen pembawa bio (sidebar/hero).
+        document.querySelectorAll("#profile-bio, #mobile-bio, #short-bio-display, .profile-bio").forEach(function (el) {
             el.textContent = bio;
         });
 
-        // Render teks About ke container #about-text-content.
-        // Data berasal dari data.bio (atau data.about_me bila ada).
-        var aboutContainer = document.getElementById("about-text-content");
+        // ABOUT PARAGRAPHS: konten panjang di section ABOUT.
+        // Wajib dari data.about (BUKAN data.bio / short bio).
+        var aboutContainer = document.getElementById("about-paragraphs") || document.querySelector(".about-text");
         if (aboutContainer) {
-            var aboutText = data.bio || data.about_me || "";
+            var aboutText = data.about || "";
             if (aboutText) {
                 aboutContainer.innerHTML = aboutText
                     .split("\n\n")
@@ -430,7 +432,7 @@ function loadPublicProfile() {
             renderProfileData(result.data || {});
         })
         .catch(function () {
-            var fallbackContainer = document.getElementById("about-text-content");
+            var fallbackContainer = document.getElementById("about-paragraphs") || document.querySelector(".about-text");
             if (fallbackContainer) {
                 fallbackContainer.innerHTML = '<p class="empty-list">No about content to display yet.</p>';
             }

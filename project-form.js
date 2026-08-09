@@ -51,7 +51,7 @@
                 document.getElementById("aboutName").value = d.full_name || "";
                 document.getElementById("aboutTagline").value = d.title || "";
                 document.getElementById("aboutShort").value = d.bio || "";
-                document.getElementById("aboutDetail").value = d.about_me || "";
+                document.getElementById("aboutDetail").value = d.about || d.about_me || "";
             })
             .catch(function () {});
 
@@ -62,7 +62,7 @@
                 full_name: document.getElementById("aboutName").value,
                 title: document.getElementById("aboutTagline").value,
                 bio: document.getElementById("aboutShort").value,
-                about_me: document.getElementById("aboutDetail").value
+                about: document.getElementById("aboutDetail").value
             };
             fetch(API_BASE_URL + "/profile", {
                 method: "PUT",

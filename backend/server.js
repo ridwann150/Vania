@@ -321,7 +321,9 @@ function serializeProfile(p) {
         tagline: p.tagline || "",
         title: p.tagline || "",
         bio: p.bio || "",
-        about_me: "",
+        short_bio: p.bio || "",
+        about: p.about || "",
+        about_me: p.about || "",
         createdAt: p.createdAt,
         updatedAt: p.updatedAt
     };
@@ -333,7 +335,8 @@ function profilePayload(body) {
     return {
         name: str(body.name ?? body.full_name),
         tagline: str(body.tagline ?? body.title),
-        bio: str(body.bio ?? body.short_bio ?? body.about_me)
+        bio: str(body.bio ?? body.short_bio ?? body.about_me),
+        about: str(body.about ?? body.about_me)
     };
 }
 
@@ -352,7 +355,8 @@ async function getOrCreateProfile() {
         .insert({
             name: "Vania Anggraini",
             tagline: "Student Digital Business",
-            bio: "Passionate about digital transformation, business strategy, and the intersection of technology and commerce."
+            bio: "Passionate about digital transformation, business strategy, and the intersection of technology and commerce.",
+            about: "Hi, I'm Vania Anggraini — a Digital Business student with a passion for exploring how technology reshapes the way businesses operate and grow."
         })
         .select()
         .maybeSingle();
