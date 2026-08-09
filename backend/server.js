@@ -1,7 +1,7 @@
 // server.js - Berkas utama untuk menjalankan server Express.js (ES Module)
 // Express digunakan untuk membuat web server dan menangani request HTTP.
 
-// dotenv memuat variabel dari file .env (contoh: DATABASE_URL)
+// dotenv memuat variabel dari file .env (contoh: SUPABASE_URL)
 import 'dotenv/config';
 
 import express from 'express';
@@ -9,16 +9,8 @@ import cors from 'cors';
 import multer from 'multer';
 import crypto from 'node:crypto';
 
-// Prisma Client adalah ORM untuk mengakses PostgreSQL.
-// Prisma 7 membutuhkan driver adapter (PrismaPg) untuk koneksi ke database.
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-
-// Supabase client untuk upload gambar ke Storage Bucket
+// Supabase JS Client untuk membaca/menulis tabel dan upload gambar ke Storage.
 import { createClient } from '@supabase/supabase-js';
-
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
-const prisma = new PrismaClient({ adapter });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -56,17 +48,31 @@ const MIME_TO_EXT = {
     'image/svg+xml': 'svg'
 };
 
-// Inisialisasi client Supabase (untuk upload ke Storage).
-// SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY harus disediakan via environment.
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Nama tabel di Supabase (persis, karena PostgREST case-sensitive).
+const PROFILE_TABLE = 'Profile';
+const EXPERIENCE_TABLE = 'Experience';
+const PROJECT_TABLE = 'Project';
+
+// ─── Inisialisasi Supabase Client ─────────────────────────────────────────────
+// SUPABASE_URL bisa juga dari NEXT_PUBLIC_SUPABASE_URL; key dari anon, dengan
+// fallback ke service role (dipakai server untuk operasi penuh tanpa RLS).
+const supabaseUrl = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/rest\/v1\/?$/, '');
+const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY;
 const storageBucket = process.env.STORAGE_BUCKET || 'project-images';
 
 let supabase = null;
-if (process.env.SUPABASE_MOCK === '1') {
-    // In-memory fake Supabase Storage for local testing (no real credentials needed).
+if (supabaseUrl && supabaseKey) {
+    supabase = createClient(supabaseUrl, supabaseKey);
+} else if (process.env.SUPABASE_MOCK === '1') {
+    // In-memory fake Supabase for local testing (no real credentials needed).
+    // Mendukung storage (upload) dan from() (CRUD) secara minimal.
     const store = new Map();
     let counter = 0;
+    const tables = {
+        [PROFILE_TABLE]: [],
+        [EXPERIENCE_TABLE]: [],
+        [PROJECT_TABLE]: []
+    };
     supabase = {
         storage: {
             from: () => ({
@@ -79,16 +85,120 @@ if (process.env.SUPABASE_MOCK === '1') {
                     data: { publicUrl: `https://mock.example/${encodeURIComponent(path)}` }
                 })
             })
+        },
+        from(table) {
+            const filters = [];
+            let orderCol = null;
+            let orderAsc = true;
+            let limitN = null;
+            const apply = () => {
+                let rows = tables[table] || [];
+                for (const [col, val] of filters) {
+                    rows = rows.filter((r) => r[col] === val);
+                }
+                if (orderCol) {
+                    rows = [...rows].sort((a, b) => {
+                        const av = a[orderCol];
+                        const bv = b[orderCol];
+                        if (av < bv) return orderAsc ? -1 : 1;
+                        if (av > bv) return orderAsc ? 1 : -1;
+                        return 0;
+                    });
+                }
+                if (limitN !== null) rows = rows.slice(0, limitN);
+                return rows;
+            };
+
+            // Batasan mock: meniru pola API yang dipakai handler:
+            //   .select() | .eq() | .order() | .limit()  → thenable menghasilkan
+            //   { data, error } setelah .maybeSingle()/.single(), atau langsung
+            //   dibaca sebagai { data, error } untuk query select() biasa.
+            const chain = {
+                select: (cols = '*') => chain,
+                order: (col, opts = {}) => { orderCol = col; orderAsc = opts.ascending !== false; return chain; },
+                limit: (n) => { limitN = n; return chain; },
+                eq: (col, val) => { const fl = [...filters, [col, val]]; return chainWith(fl); },
+                maybeSingle: () => Promise.resolve({ data: apply()[0] || null, error: null }),
+                single: () => Promise.resolve({ data: apply()[0] || null, error: null }),
+                then(resolve, reject) {
+                    return Promise.resolve({ data: apply(), error: null }).then(resolve, reject);
+                }
+            };
+            const chainWith = (fl) => {
+                const ch = Object.create(null);
+                Object.defineProperty(ch, 'then', {
+                    value: function (resolve, reject) {
+                        return Promise.resolve({ data: applyWith(fl), error: null }).then(resolve, reject);
+                    }
+                });
+                Object.defineProperty(ch, 'select', { value: () => ch });
+                Object.defineProperty(ch, 'order', { value: (col, o = {}) => { orderCol = col; orderAsc = o.ascending !== false; return ch; } });
+                Object.defineProperty(ch, 'limit', { value: (n) => { limitN = n; return ch; } });
+                Object.defineProperty(ch, 'eq', { value: (col, v) => ch });
+                Object.defineProperty(ch, 'maybeSingle', {
+                    value: () => Promise.resolve({ data: applyWith(fl)[0] || null, error: null })
+                });
+                Object.defineProperty(ch, 'single', {
+                    value: () => Promise.resolve({ data: applyWith(fl)[0] || null, error: null })
+                });
+                return ch;
+            };
+            const applyWith = (fl) => {
+                let rows = tables[table] || [];
+                for (const [col, val] of fl) {
+                    rows = rows.filter((r) => r[col] === val);
+                }
+                return rows;
+            };
+
+            const builder = {
+                select: (cols = '*') => chain,
+                order: (col, opts = {}) => { orderCol = col; orderAsc = opts.ascending !== false; return chain; },
+                limit: (n) => { limitN = n; return chain; },
+                eq: (col, val) => chainWith([[col, val]]),
+                maybeSingle: async () => ({ data: apply()[0] || null, error: null }),
+                single: async () => ({ data: apply()[0] || null, error: null }),
+                insert: (rows) => {
+                    const list = Array.isArray(rows) ? rows : [rows];
+                    list.forEach((r) => tables[table].push(r));
+                    // insert biasa dipakai tanpa .maybeSingle(): langsung { data, error }
+                    const result = { data: list, error: null };
+                    return {
+                        select: () => ({
+                            maybeSingle: async () => ({ data: list[0] || null, error: null }),
+                            single: async () => ({ data: list[0] || null, error: null })
+                        })
+                    };
+                },
+                update: (patch) => ({
+                    eq: () => {
+                        const rows = apply();
+                        rows.forEach((r) => Object.assign(r, patch));
+                        return {
+                            select: () => ({
+                                maybeSingle: async () => ({ data: rows[0] || null, error: null }),
+                                single: async () => ({ data: rows[0] || null, error: null })
+                            })
+                        };
+                    }
+                }),
+                delete: () => ({
+                    eq: async () => {
+                        const ids = apply().map((r) => r.id);
+                        tables[table] = tables[table].filter((r) => !ids.includes(r.id));
+                        return { data: null, error: null };
+                    }
+                })
+            };
+            return builder;
         }
     };
-} else if (supabaseUrl && supabaseKey) {
-    supabase = createClient(supabaseUrl, supabaseKey);
 }
 
 // Upload satu file Buffer ke Supabase Storage, kembalikan URL publiknya.
 async function uploadImageToSupabase(file) {
     if (!supabase) {
-        throw new Error('Supabase client not initialized (set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY)');
+        throw new Error('Supabase client not initialized (set SUPABASE_URL + SUPABASE_ANON_KEY or SUPABASE_SERVICE_ROLE_KEY)');
     }
     const ext = MIME_TO_EXT[file.mimetype] || 'bin';
     // Nama file unik agar tidak menimpa file lain di bucket yang sama
@@ -223,29 +333,31 @@ function profilePayload(body) {
     return {
         name: str(body.name ?? body.full_name),
         tagline: str(body.tagline ?? body.title),
-        bio: str(body.bio ?? body.short_bio)
+        bio: str(body.bio ?? body.short_bio ?? body.about_me)
     };
 }
 
 // Ambil (atau buat bila belum ada) data profil tunggal.
 async function getOrCreateProfile() {
-    const PROFILE_ID = 'vania-profile';
-    let profile = await prisma.profile.findUnique({ where: { id: PROFILE_ID } });
-    if (!profile) {
-        try {
-            const existing = await prisma.profile.findFirst();
-            if (existing) return existing;
-        } catch (e) {}
-        profile = await prisma.profile.create({
-            data: {
-                id: PROFILE_ID,
-                name: "Vania Anggraini",
-                tagline: "Student Digital Business",
-                bio: "Passionate about digital transformation, business strategy, and the intersection of technology and commerce."
-            }
-        });
-    }
-    return profile;
+    const { data, error } = await supabase
+        .from(PROFILE_TABLE)
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+
+    if (!error && data) return data;
+
+    const { data: created } = await supabase
+        .from(PROFILE_TABLE)
+        .insert({
+            name: "Vania Anggraini",
+            tagline: "Student Digital Business",
+            bio: "Passionate about digital transformation, business strategy, and the intersection of technology and commerce."
+        })
+        .select()
+        .maybeSingle();
+
+    return created;
 }
 
 // GET /api/profile (alias /api/about, /api/user) - Mengambil data profil/about.
@@ -265,7 +377,6 @@ app.get('/api/about', handleGetProfile);
 app.get('/api/user', handleGetProfile);
 
 // PUT /api/profile (alias /api/about, /api/user) - Memperbarui data profil
-//
 async function handlePutProfile(req, res) {
     try {
         if (!req.body || typeof req.body !== 'object') {
@@ -273,8 +384,16 @@ async function handlePutProfile(req, res) {
         }
         const data = profilePayload(req.body);
         const existing = await getOrCreateProfile();
-        const profile = await prisma.profile.update({ where: { id: existing.id }, data });
-        res.json({ success: true, data: serializeProfile(profile) });
+
+        const { data: updated, error } = await supabase
+            .from(PROFILE_TABLE)
+            .update(data)
+            .eq('id', existing.id)
+            .select()
+            .maybeSingle();
+
+        if (error) throw error;
+        res.json({ success: true, data: serializeProfile(updated) });
     } catch (error) {
         console.error(error);
         // Jangan tutup data jika DB gagal — kembalikan 200 + payload kosong.
@@ -314,12 +433,16 @@ function toArray(val) {
 // GET /api/projects - Mengambil semua project dari database
 app.get('/api/projects', async (req, res) => {
     try {
-        const projects = await prisma.project.findMany({
-            orderBy: { createdAt: 'desc' }
-        });
+        const { data, error } = await supabase
+            .from(PROJECT_TABLE)
+            .select('*')
+            .order('createdAt', { ascending: false });
+
+        if (error) throw error;
+
         res.json({
             success: true,
-            data: projects.map(serializeProject)
+            data: (data || []).map(serializeProject)
         });
     } catch (error) {
         console.error(error);
@@ -336,9 +459,14 @@ app.get('/api/projects', async (req, res) => {
 app.get('/api/projects/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const project = await prisma.project.findUnique({
-            where: { id }
-        });
+
+        const { data: project, error } = await supabase
+            .from(PROJECT_TABLE)
+            .select('*')
+            .eq('id', id)
+            .maybeSingle();
+
+        if (error) throw error;
 
         if (!project) {
             return res.status(404).json({
@@ -377,15 +505,20 @@ app.post('/api/projects', upload.array('image', 20), async (req, res) => {
         // lalu URL publiknya disimpan ke kolom imageUrl.
         const images = await uploadFilesToSupabase(req.files);
 
-        const newProject = await prisma.project.create({
-            data: {
+        const { data: newProject, error } = await supabase
+            .from(PROJECT_TABLE)
+            .insert({
+                id: crypto.randomUUID(),
                 title,
                 description,
                 projectUrl: link || "",
                 imageUrl: images[0] || "",
                 techStack: toArray(technologies)
-            }
-        });
+            })
+            .select()
+            .maybeSingle();
+
+        if (error) throw error;
 
         res.status(201).json({
             success: true,
@@ -415,9 +548,14 @@ app.put('/api/projects/:id', upload.array('image', 20), async (req, res) => {
         }
 
         // Cek apakah project ada
-        const existing = await prisma.project.findUnique({
-            where: { id }
-        });
+        const { data: existing, error: fetchError } = await supabase
+            .from(PROJECT_TABLE)
+            .select('*')
+            .eq('id', id)
+            .maybeSingle();
+
+        if (fetchError) throw fetchError;
+
         if (!existing) {
             return res.status(404).json({
                 success: false,
@@ -430,16 +568,20 @@ app.put('/api/projects/:id', upload.array('image', 20), async (req, res) => {
         const images = await uploadFilesToSupabase(req.files);
         const imageUrl = images.length > 0 ? images[0] : (existing.imageUrl || "");
 
-        const updatedProject = await prisma.project.update({
-            where: { id },
-            data: {
+        const { data: updatedProject, error } = await supabase
+            .from(PROJECT_TABLE)
+            .update({
                 title,
                 description,
                 projectUrl: link || existing.projectUrl || "",
                 imageUrl,
                 techStack: technologies !== undefined ? toArray(technologies) : (existing.techStack || [])
-            }
-        });
+            })
+            .eq('id', id)
+            .select()
+            .maybeSingle();
+
+        if (error) throw error;
 
         res.json({
             success: true,
@@ -460,9 +602,13 @@ app.delete('/api/projects/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        const existing = await prisma.project.findUnique({
-            where: { id }
-        });
+        const { data: existing, error: fetchError } = await supabase
+            .from(PROJECT_TABLE)
+            .select('id')
+            .eq('id', id)
+            .maybeSingle();
+
+        if (fetchError) throw fetchError;
 
         if (!existing) {
             return res.status(404).json({
@@ -471,9 +617,12 @@ app.delete('/api/projects/:id', async (req, res) => {
             });
         }
 
-        await prisma.project.delete({
-            where: { id }
-        });
+        const { error } = await supabase
+            .from(PROJECT_TABLE)
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
 
         res.json({
             success: true,
@@ -531,12 +680,16 @@ function normalizeExperience(body) {
 // GET /api/experiences - Mengambil semua experience dari database
 app.get('/api/experiences', async (req, res) => {
     try {
-        const experiences = await prisma.experience.findMany({
-            orderBy: { createdAt: 'desc' }
-        });
+        const { data, error } = await supabase
+            .from(EXPERIENCE_TABLE)
+            .select('*')
+            .order('createdAt', { ascending: false });
+
+        if (error) throw error;
+
         res.json({
             success: true,
-            data: experiences.map(serializeExperience)
+            data: (data || []).map(serializeExperience)
         });
     } catch (error) {
         console.error(error);
@@ -553,9 +706,14 @@ app.get('/api/experiences', async (req, res) => {
 app.get('/api/experiences/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const experience = await prisma.experience.findUnique({
-            where: { id }
-        });
+
+        const { data: experience, error } = await supabase
+            .from(EXPERIENCE_TABLE)
+            .select('*')
+            .eq('id', id)
+            .maybeSingle();
+
+        if (error) throw error;
 
         if (!experience) {
             return res.status(404).json({
@@ -590,7 +748,16 @@ app.post('/api/experiences', async (req, res) => {
             });
         }
 
-        const newExperience = await prisma.experience.create({ data });
+        const { data: newExperience, error } = await supabase
+            .from(EXPERIENCE_TABLE)
+            .insert({
+                id: crypto.randomUUID(),
+                ...data
+            })
+            .select()
+            .maybeSingle();
+
+        if (error) throw error;
 
         res.status(201).json({
             success: true,
@@ -612,7 +779,14 @@ app.put('/api/experiences/:id', async (req, res) => {
         const { id } = req.params;
         const data = normalizeExperience(req.body);
 
-        const existing = await prisma.experience.findUnique({ where: { id } });
+        const { data: existing, error: fetchError } = await supabase
+            .from(EXPERIENCE_TABLE)
+            .select('id')
+            .eq('id', id)
+            .maybeSingle();
+
+        if (fetchError) throw fetchError;
+
         if (!existing) {
             return res.status(404).json({
                 success: false,
@@ -620,10 +794,14 @@ app.put('/api/experiences/:id', async (req, res) => {
             });
         }
 
-        const updatedExperience = await prisma.experience.update({
-            where: { id },
-            data
-        });
+        const { data: updatedExperience, error } = await supabase
+            .from(EXPERIENCE_TABLE)
+            .update(data)
+            .eq('id', id)
+            .select()
+            .maybeSingle();
+
+        if (error) throw error;
 
         res.json({
             success: true,
@@ -644,7 +822,14 @@ app.delete('/api/experiences/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        const existing = await prisma.experience.findUnique({ where: { id } });
+        const { data: existing, error: fetchError } = await supabase
+            .from(EXPERIENCE_TABLE)
+            .select('id')
+            .eq('id', id)
+            .maybeSingle();
+
+        if (fetchError) throw fetchError;
+
         if (!existing) {
             return res.status(404).json({
                 success: false,
@@ -652,7 +837,12 @@ app.delete('/api/experiences/:id', async (req, res) => {
             });
         }
 
-        await prisma.experience.delete({ where: { id } });
+        const { error } = await supabase
+            .from(EXPERIENCE_TABLE)
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
 
         res.json({
             success: true,
