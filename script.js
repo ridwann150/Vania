@@ -489,69 +489,37 @@ if (downloadCvBtn) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
         btn.disabled = true;
 
-        var cvContainer = document.createElement("div");
-        cvContainer.style.cssText = "padding:40px;font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;width:750px;";
-        cvContainer.innerHTML = [
-            '<div style="text-align:center;margin-bottom:20px;">',
-            '<h1 style="margin:0;font-size:24px;font-weight:bold;">Vania Anggraini</h1>',
-            '<p style="margin:4px 0 0;font-size:14px;">Student Digital Business</p>',
-            '<p style="margin:4px 0 0;font-size:12px;">vaniaangraini55@gmail.com</p>',
-            '</div>',
-            '<div style="margin-bottom:18px;">',
-            '<h2 style="font-size:14px;font-weight:bold;border-bottom:1px solid #000;padding-bottom:3px;margin-bottom:8px;letter-spacing:1px;">PROFESSIONAL SUMMARY</h2>',
-            '<p style="font-size:12px;line-height:1.6;margin:0;">Digital Business student passionate about exploring how technology reshapes the way businesses operate and grow. Skilled in business strategy, digital marketing, and emerging technologies with hands-on campus entrepreneurship experience.</p>',
-            '</div>',
-            '<div style="margin-bottom:18px;">',
-            '<h2 style="font-size:14px;font-weight:bold;border-bottom:1px solid #000;padding-bottom:3px;margin-bottom:8px;letter-spacing:1px;">EDUCATION</h2>',
-            '<div style="margin-bottom:10px;">',
-            '<div style="display:flex;justify-content:space-between;">',
-            '<strong style="font-size:13px;">Universitas Satya Terra Bhinneka</strong>',
-            '<span style="font-size:12px;">2023 — Present</span>',
-            '</div>',
-            '<p style="margin:2px 0 5px;font-size:12px;font-style:italic;">S1 Digital Business</p>',
-            '<ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.6;">',
-            '<li>Studying core business principles alongside digital strategy, e-commerce systems, and technology-driven business models.</li>',
-            '<li>Actively involved in campus entrepreneurship programs.</li>',
-            '</ul>',
-            '</div>',
-            '</div>',
-            '<div style="margin-bottom:18px;">',
-            '<h2 style="font-size:14px;font-weight:bold;border-bottom:1px solid #000;padding-bottom:3px;margin-bottom:8px;letter-spacing:1px;">SKILLS</h2>',
-            '<p style="font-size:12px;line-height:1.6;margin:0;">E-Commerce &nbsp;|&nbsp; Digital Marketing &nbsp;|&nbsp; Business Strategy &nbsp;|&nbsp; Data Analytics &nbsp;|&nbsp; Market Research &nbsp;|&nbsp; SEO</p>',
-            '</div>',
-            '<div style="margin-bottom:18px;">',
-            '<h2 style="font-size:14px;font-weight:bold;border-bottom:1px solid #000;padding-bottom:3px;margin-bottom:8px;letter-spacing:1px;">PROJECTS</h2>',
-            '<ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.7;">',
-            '<li><strong>Digital Business Case Study</strong> — Analysis of retail-to-e-commerce transformation with ROI modeling.</li>',
-            '<li><strong>E-Commerce Strategy Plan</strong> — Go-to-market strategy for a local brand entering the national market.</li>',
-            '<li><strong>UX Research for Fintech App</strong> — Usability testing that reduced app onboarding drop-off rates by 15%.</li>',
-            '</ul>',
-            '</div>'
-        ].join("");
-
-        var wrapper = document.createElement("div");
-        wrapper.style.cssText = "position:absolute;left:-9999px;top:0;";
-        wrapper.appendChild(cvContainer);
-        document.body.appendChild(wrapper);
-
-        if (typeof html2pdf !== "undefined") {
-            html2pdf().set({
-                margin: 0.5,
-                filename: "Vania_Anggraini_ATS_Resume.pdf",
-                image: { type: "jpeg", quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true },
-                jsPDF: { unit: "in", format: "letter", orientation: "portrait" }
-            }).from(cvContainer).save().then(function () {
-                document.body.removeChild(wrapper);
-                btn.innerHTML = btnOriginalText;
-                btn.disabled = false;
-            });
-        } else {
-            document.body.removeChild(wrapper);
+        function restore() {
             btn.innerHTML = btnOriginalText;
             btn.disabled = false;
-            alert("PDF library not loaded. Please refresh the page.");
         }
+
+        // Unduh PDF text-based (ATS) dari backend. Gambar tidak dipakai karena
+        // text PDF lebih ramah ATS ketimbang hasil raster html2canvas.
+        fetch(API_BASE_URL + "/download-cv", { cache: "no-store" })
+            .then(function (res) {
+                if (!res.ok) throw new Error("download-cv failed (" + res.status + ")");
+                return res.blob();
+            })
+            .then(function (blob) {
+                if (!window.navigator.msSaveOrOpenBlob) {
+                    var url = URL.createObjectURL(blob);
+                    var a = document.createElement("a");
+                    a.href = url;
+                    a.download = "Vania_Anggraini_ATS_Resume.pdf";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+                } else {
+                    window.navigator.msSaveOrOpenBlob(blob, "Vania_Anggraini_ATS_Resume.pdf");
+                }
+                restore();
+            })
+            .catch(function () {
+restore();
+                alert("Gagal mengunduh resume. Pastikan backend aktif, lalu coba lagi.");
+            });
     });
 }
 

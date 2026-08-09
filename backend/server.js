@@ -12,6 +12,9 @@ import crypto from 'node:crypto';
 // Supabase JS Client untuk membaca/menulis tabel dan upload gambar ke Storage.
 import { createClient } from '@supabase/supabase-js';
 
+// Generator PDF resume ATS (text-based, format A4, font Times-Roman).
+import { buildCvPdf } from './cv-generator.js';
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -858,6 +861,35 @@ app.delete('/api/experiences/:id', async (req, res) => {
         res.status(200).json({
             success: false,
             message: "Failed to delete experience."
+        });
+    }
+});
+
+// GET /api/download-cv - Unduh resume ATS dalam bentuk PDF (text-based).
+// Menggabungkan data profil + experience + project dari Supabase secara dinamis.
+app.get('/api/download-cv', async (req, res) => {
+    try {
+        const [profileRes, expRes, projRes] = await Promise.all([
+            supabase.from(PROFILE_TABLE).select('*').limit(1).maybeSingle(),
+            supabase.from(EXPERIENCE_TABLE).select('*').order('createdAt', { ascending: false }),
+            supabase.from(PROJECT_TABLE).select('*').order('createdAt', { ascending: false })
+        ]);
+
+        const pdf = await buildCvPdf({
+            profile: profileRes.data || {},
+            experiences: expRes.data || [],
+            projects: projRes.data || []
+        });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename="Vania_Anggraini_ATS_Resume.pdf"');
+        res.setHeader('Cache-Control', 'no-store');
+        res.send(pdf);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to generate resume PDF."
         });
     }
 });
