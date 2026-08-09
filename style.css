@@ -297,7 +297,7 @@ body {
     }
 
     /* Link admin footer hanya untuk Desktop; di Mobile hanya ada di hamburger */
-    .site-footer .admin-link {
+    .site-footer .admin-footer-link {
         display: none !important;
     }
 
@@ -334,6 +334,15 @@ body {
         font-size: 1.8rem !important;
         cursor: pointer !important;
         pointer-events: auto !important;
+    }
+
+    /* Maskot lebih kecil di mobile agar tidak menutupi konten */
+    .floating-mascot {
+        width: 42px !important;
+        height: 42px !important;
+        bottom: 15px !important;
+        right: 15px !important;
+        opacity: 0.9;
     }
 }
 
@@ -786,28 +795,75 @@ body {
 /* ─── Footer ──────────────────────────────────────────────────────────────── */
 
 .site-footer {
-    color: var(--text-muted);
-    font-size: 13px;
-    text-align: center;
     width: 100%;
-    margin: 3rem auto 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2.5rem 1rem 1.5rem 1rem;
+    margin-top: 4rem;
+    gap: 0.5rem;
 }
 
-.site-footer .admin-link {
-    position: absolute;
-    right: 24px;
-    opacity: 0.5;
+.site-footer .copyright-text {
+    font-size: 0.875rem;
+    color: var(--text-secondary, #8892b0);
+    margin: 0;
+}
+
+.site-footer .admin-footer-link {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.25);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.site-footer .admin-footer-link:hover {
+    color: var(--accent, #ff79c6);
 }
 
 /* Link admin footer hanya tampil di Desktop */
 @media (min-width: 769px) {
-    .site-footer .admin-link {
+    .site-footer .admin-footer-link {
         display: inline;
     }
 }
 
 .site-footer span {
     display: none;
+}
+
+/* ─── Floating Mascot ─────────────────────────────────────────────────────── */
+
+.floating-mascot {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    width: 55px;
+    height: 55px;
+    cursor: pointer;
+    filter: drop-shadow(0 4px 10px rgba(255, 121, 198, 0.4));
+    animation: mascotFloat 3s ease-in-out infinite;
+    transition: transform 0.3s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.floating-mascot:hover {
+    transform: scale(1.15) rotate(5deg);
+}
+
+.floating-mascot img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+@keyframes mascotFloat {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
 }
 
 .site-footer-login {
@@ -827,19 +883,6 @@ body {
 .manage-page {
     flex: 1;
     padding: 40px 24px 60px;
-}
-
-.admin-link {
-    color: var(--text-muted);
-    font-size: 11px;
-    text-decoration: none;
-    opacity: 0.4;
-    transition: opacity var(--transition);
-}
-
-.admin-link:hover {
-    opacity: 1;
-    color: var(--accent);
 }
 
 /* ─── Lightbox ────────────────────────────────────────────────────────────── */
