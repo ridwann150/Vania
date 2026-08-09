@@ -238,7 +238,8 @@ async function handleGetProfile(req, res) {
         res.json({ success: true, data: profile });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ success: false, message: "Failed to fetch profile." });
+        // Tetap kembalikan JSON aman (objek kosong), bukan HTTP 500 polos.
+        res.status(500).json({ success: false, data: {}, message: "Failed to fetch profile." });
     }
 }
 
@@ -280,8 +281,10 @@ app.get('/api/projects', async (req, res) => {
         });
     } catch (error) {
         console.error(error);
+        // Tetap kembalikan JSON aman (array kosong), bukan HTTP 500 polos.
         res.status(500).json({
             success: false,
+            data: [],
             message: "Failed to fetch projects."
         });
     }
@@ -477,8 +480,10 @@ app.get('/api/experiences', async (req, res) => {
         });
     } catch (error) {
         console.error(error);
+        // Tetap kembalikan JSON aman (array kosong), bukan HTTP 500 polos.
         res.status(500).json({
             success: false,
+            data: [],
             message: "Failed to fetch experiences."
         });
     }
