@@ -35,7 +35,7 @@
         // Selalu ambil dari API (Supabase). Tanpa cache/localStorage.
         fetch(API_BASE_URL + "/profile", {
             cache: "no-store",
-            headers: { "Pragma": "no-cache", "Cache-Control": "no-cache, no-store" }
+            headers: getAuthHeaders()
         })
             .then(function (res) {
                 if (!res.ok) throw new Error("profile fetch failed");
@@ -61,17 +61,17 @@
             };
             fetch(API_BASE_URL + "/profile", {
                 method: "PUT",
-                headers: { "Content-Type": "application/json", "Pragma": "no-cache", "Cache-Control": "no-cache, no-store" },
+                headers: Object.assign({}, getAuthHeaders(), { "Content-Type": "application/json" }),
                 body: JSON.stringify(payload)
             })
             .then(function () {
-                localStorage.clear();
+                clearPublicCacheOnly();
                 msg.textContent = "Data Berhasil Disimpan!";
                 msg.className = "form-message success";
                 setTimeout(function () { msg.textContent = ""; }, 3000);
             })
             .catch(function () {
-                localStorage.clear();
+                clearPublicCacheOnly();
                 msg.textContent = "Data Berhasil Disimpan!";
                 msg.className = "form-message success";
                 setTimeout(function () { msg.textContent = ""; }, 3000);
@@ -90,7 +90,7 @@
         // Selalu ambil dari API (Supabase). Tanpa cache/localStorage.
         fetch(API_BASE_URL + "/experiences", {
             cache: "no-store",
-            headers: { "Pragma": "no-cache", "Cache-Control": "no-cache, no-store" }
+            headers: getAuthHeaders()
         })
             .then(function (res) {
                 if (!res.ok) throw new Error("experiences fetch failed");
@@ -145,11 +145,11 @@
 
             fetch(url, {
                 method: method,
-                headers: { "Content-Type": "application/json", "Pragma": "no-cache", "Cache-Control": "no-cache, no-store" },
+                headers: Object.assign({}, getAuthHeaders(), { "Content-Type": "application/json" }),
                 body: JSON.stringify(payload)
             })
             .then(function () {
-                localStorage.clear();
+                clearPublicCacheOnly();
                 msg.textContent = "Data Berhasil Disimpan!";
                 msg.className = "form-message success";
                 setTimeout(function () { msg.textContent = ""; }, 3000);
@@ -163,7 +163,7 @@
                 loadExperiences();
             })
             .catch(function () {
-                localStorage.clear();
+                clearPublicCacheOnly();
                 msg.textContent = "Data Berhasil Disimpan!";
                 msg.className = "form-message success";
                 setTimeout(function () { msg.textContent = ""; }, 3000);
@@ -193,7 +193,7 @@
 
                 if (editBtn) {
                     var id = editBtn.getAttribute("data-exp-edit");
-                    fetch(API_BASE_URL + "/experiences", { cache: "no-store", headers: { "Pragma": "no-cache", "Cache-Control": "no-cache, no-store" } })
+                    fetch(API_BASE_URL + "/experiences", { cache: "no-store", headers: getAuthHeaders() })
                         .then(function (res) { return res.json(); })
                         .then(function (result) {
                             var exp = (result.data || []).find(function (x) { return String(x.id) === String(id); });
@@ -225,17 +225,17 @@
         experienceForm.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
-    // ─── Delete Experience (full sync: API → localStorage.clear → re-render) ──
+    // ─── Delete Experience (API ke Supabase, lalu bersihkan hanya cache publik) ──
 
     function deleteExperience(id) {
         // 1. Kirim HTTP DELETE ke backend terlebih dahulu.
-        fetch(API_BASE_URL + "/experiences/" + id, { method: "DELETE" })
+        fetch(API_BASE_URL + "/experiences/" + id, { method: "DELETE", headers: getAuthHeaders() })
             .then(function () {
-                localStorage.clear();
+                clearPublicCacheOnly();
                 loadExperiences();
             })
             .catch(function () {
-                localStorage.clear();
+                clearPublicCacheOnly();
                 loadExperiences();
             });
     }
@@ -332,7 +332,7 @@
             listEl.innerHTML = '<p class="empty-list">Loading...</p>';
             fetch(API_BASE_URL + "/projects", {
                 cache: "no-store",
-                headers: { "Pragma": "no-cache", "Cache-Control": "no-cache, no-store" }
+                headers: getAuthHeaders()
             })
                 .then(function (res) {
                     if (!res.ok) throw new Error("projects fetch failed");
@@ -425,17 +425,17 @@
             selectedFiles.forEach(function (file) { formData.append("image", file); });
             var isEdit = !!editId;
             var url = isEdit ? API_BASE_URL + "/projects/" + editId : API_BASE_URL + "/projects";
-            fetch(url, { method: isEdit ? "PUT" : "POST", body: formData })
+            fetch(url, { method: isEdit ? "PUT" : "POST", body: formData, headers: getAuthHeaders() })
                 .then(function (res) { return res.json().catch(function () { return {}; }); })
                 .then(function (resData) {
-                    localStorage.clear();
+                    clearPublicCacheOnly();
                     resetProjectForm();
                     renderManageList();
                     if (messageEl) { messageEl.textContent = "Data Berhasil Disimpan!"; messageEl.className = "form-message success"; }
                     setTimeout(function () { if (messageEl) { messageEl.textContent = ""; messageEl.className = "form-message"; } }, 3000);
                 })
                 .catch(function () {
-                    localStorage.clear();
+                    clearPublicCacheOnly();
                     renderManageList();
                 });
         });
@@ -460,7 +460,7 @@
                 if (thumb) {
                     var pid = thumb.getAttribute("data-project-id");
                     var startIdx = parseInt(thumb.getAttribute("data-img-index"), 10);
-                    fetch(API_BASE_URL + "/projects", { cache: "no-store", headers: { "Pragma": "no-cache", "Cache-Control": "no-cache, no-store" } })
+                    fetch(API_BASE_URL + "/projects", { cache: "no-store", headers: getAuthHeaders() })
                         .then(function (res) { return res.json(); })
                         .then(function (result) {
                             var proj = (result.data || []).find(function (p) { return String(p.id) === String(pid); });
@@ -472,7 +472,7 @@
                 var editBtn = e.target.closest("[data-edit]");
                 if (editBtn) {
                     var id = editBtn.getAttribute("data-edit");
-                    fetch(API_BASE_URL + "/projects", { cache: "no-store", headers: { "Pragma": "no-cache", "Cache-Control": "no-cache, no-store" } })
+                    fetch(API_BASE_URL + "/projects", { cache: "no-store", headers: getAuthHeaders() })
                         .then(function (res) { return res.json(); })
                         .then(function (result) {
                             var projEdit = (result.data || []).find(function (p) { return String(p.id) === String(id); });
@@ -498,16 +498,16 @@
     function deleteProject(id) {
         fetch(API_BASE_URL + "/projects/" + encodeURIComponent(id), {
             method: "DELETE",
-            headers: { "Pragma": "no-cache", "Cache-Control": "no-cache, no-store" },
+            headers: getAuthHeaders(),
             cache: "no-store"
         })
             .then(function () {
-                localStorage.clear();
+                clearPublicCacheOnly();
                 if (String(projectIdInput.value) === String(id)) resetProjectFormEx();
                 renderManageList();
             })
             .catch(function () {
-                localStorage.clear();
+                clearPublicCacheOnly();
                 if (String(projectIdInput.value) === String(id)) resetProjectFormEx();
                 renderManageList();
             });

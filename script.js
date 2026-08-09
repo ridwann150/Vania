@@ -2,6 +2,13 @@ console.log("Vania Anggraini | Portfolio loaded.");
 
 const API_BASE_URL = "https://vania-backend.vercel.app/api";
 
+function getAuthHeaders() {
+    const headers = { "Pragma": "no-cache", "Cache-Control": "no-cache, no-store" };
+    const token = localStorage.getItem("adminToken");
+    if (token) headers["Authorization"] = "Bearer " + token;
+    return headers;
+}
+
 // ─── Theme Toggle ─────────────────────────────────────────────────────────────
 
 const THEME_KEY = "portfolio_theme";
@@ -127,6 +134,14 @@ function setLoggedIn(value) {
         localStorage.removeItem(AUTH_KEY);
         localStorage.removeItem("adminToken");
     }
+}
+
+// ─── Verbal cache cleanup ──────────────────────────────────────────────────────
+
+function clearPublicCacheOnly() {
+    ['va_about', 'va_experiences', 'va_projects', 'va_profile_cache'].forEach(function (key) {
+        localStorage.removeItem(key);
+    });
 }
 
 // ─── Admin Floating Badge ─────────────────────────────────────────────────────
