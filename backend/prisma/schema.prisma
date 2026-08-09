@@ -11,37 +11,44 @@ datasource db {
   provider = "postgresql"
 }
 
-model Project {
-  id          String   @id @default(uuid()) @db.Uuid
-  title       String
-  description String
-  link        String   @default("")
-  images      String[] @default([])
-  createdAt   DateTime @default(now())
+// Model-model di bawah ini dipetakan (@@map) persis ke tabel yang sudah ada
+// di Supabase (casing huruf besarnya dipertahankan). Nama kolom API mengikuti
+// nama kolom fisik di database (camelCase). Jangan ubah ke huruf kecil karena
+// tabel fisiknya bernama `Profile`, `Experience`, dan `Project`.
+
+model Profile {
+  id        String   @id @default(uuid())
+  name      String
+  tagline   String
+  bio       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("Profile")
 }
 
 model Experience {
-  id           String   @id @default(uuid()) @db.Uuid
-  type         String   @default("work") @db.VarChar(20)
-  role_title   String
-  organization String
-  period       String   @default("")
-  start_date   String   @default("")
-  end_date     String   @default("")
-  description  String   @default("")
-  technologies String[] @default([])
-  is_current   Boolean  @default(false)
-  tags         String[] @default([])
-  createdAt    DateTime @default(now())
+  id          String   @id @default(uuid())
+  period      String
+  roleTitle   String
+  company     String
+  description String
+  skills      String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("Experience")
 }
 
-model Profile {
-  id        String   @id
-  full_name String   @default("")
-  title     String   @default("")
-  tagline   String   @default("")
-  bio       String   @default("")
-  about_me  String   @default("")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Project {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  imageUrl    String?
+  projectUrl  String?
+  techStack   String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("Project")
 }

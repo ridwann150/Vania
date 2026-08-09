@@ -191,7 +191,7 @@ app.post('/api/login', async (req, res) => {
         }
     } catch (error) {
         console.error(error);
-        res.status(500).json({
+        res.status(200).json({
             success: false,
             message: "Login failed."
         });
@@ -200,31 +200,48 @@ app.post('/api/login', async (req, res) => {
 
 // ─── Profile CRUD (About) ──────────────────────────────────────────────────────
 
+// Serializer: selaraskan nama field API dengan yang diharapkan frontend
+// (full_name/title/about_me) padahal kolom DB adalah name/tagline/bio.
+function serializeProfile(p) {
+    if (!p) return null;
+    return {
+        id: p.id,
+        name: p.name || "",
+        full_name: p.name || "",
+        tagline: p.tagline || "",
+        title: p.tagline || "",
+        bio: p.bio || "",
+        about_me: "",
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt
+    };
+}
+
 // Semua muatan payload yang sama untuk /api/profile, /api/about, dan /api/user.
 function profilePayload(body) {
     function str(v) { return typeof v === 'string' ? v.trim() : ''; }
     return {
-        full_name: str(body.full_name ?? body.name) || '',
-        title: str(body.title ?? body.tagline) || '',
-        tagline: str(body.tagline) || '',
-        bio: str(body.bio ?? body.short_bio) || '',
-        about_me: str(body.about_me ?? body.about) || ''
+        name: str(body.name ?? body.full_name),
+        tagline: str(body.tagline ?? body.title),
+        bio: str(body.bio ?? body.short_bio)
     };
 }
 
 // Ambil (atau buat bila belum ada) data profil tunggal.
 async function getOrCreateProfile() {
-    const PROFILE_ID = 'about';
+    const PROFILE_ID = 'vania-profile';
     let profile = await prisma.profile.findUnique({ where: { id: PROFILE_ID } });
     if (!profile) {
+        try {
+            const existing = await prisma.profile.findFirst();
+            if (existing) return existing;
+        } catch (e) {}
         profile = await prisma.profile.create({
             data: {
                 id: PROFILE_ID,
-                full_name: "Vania Anggraini",
-                title: "Student Digital Business",
+                name: "Vania Anggraini",
                 tagline: "Student Digital Business",
-                bio: "Passionate about digital transformation, business strategy, and the intersection of technology and commerce.",
-                about_me: "Hi, I'm Vania Anggraini — a Digital Business student..."
+                bio: "Passionate about digital transformation, business strategy, and the intersection of technology and commerce."
             }
         });
     }
@@ -235,11 +252,11 @@ async function getOrCreateProfile() {
 async function handleGetProfile(req, res) {
     try {
         const profile = await getOrCreateProfile();
-        res.json({ success: true, data: profile });
+        res.json({ success: true, data: serializeProfile(profile) });
     } catch (error) {
         console.error(error);
-        // Tetap kembalikan JSON aman (objek kosong), bukan HTTP 500 polos.
-        res.status(500).json({ success: false, data: {}, message: "Failed to fetch profile." });
+        // Tetap kembalikan JSON aman (objek kosong) dengan HTTP 200 agar UI tidak crash.
+        res.status(200).json({ success: false, data: {}, message: "Failed to fetch profile." });
     }
 }
 
@@ -247,27 +264,52 @@ app.get('/api/profile', handleGetProfile);
 app.get('/api/about', handleGetProfile);
 app.get('/api/user', handleGetProfile);
 
-// PUT /api/profile (alias /api/about, /api/user) - Memperbarui data profil/about
+// PUT /api/profile (alias /api/about, /api/user) - Memperbarui data profil
+//
 async function handlePutProfile(req, res) {
     try {
         if (!req.body || typeof req.body !== 'object') {
             return res.status(400).json({ success: false, message: "Invalid profile payload." });
         }
         const data = profilePayload(req.body);
-        const existing = await prisma.profile.findUnique({ where: { id: 'about' } });
-        const profile = existing
-            ? await prisma.profile.update({ where: { id: 'about' }, data })
-            : await prisma.profile.create({ data: { id: 'about', ...data } });
-        res.json({ success: true, data: profile });
+        const existing = await getOrCreateProfile();
+        const profile = await prisma.profile.update({ where: { id: existing.id }, data });
+        res.json({ success: true, data: serializeProfile(profile) });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ success: false, message: "Failed to update profile." });
+        // Jangan tutup data jika DB gagal — kembalikan 200 + payload kosong.
+        res.status(200).json({ success: false, data: {}, message: "Failed to update profile." });
     }
 }
 
 app.put('/api/profile', handlePutProfile);
 app.put('/api/about', handlePutProfile);
 app.put('/api/user', handlePutProfile);
+
+// Serializer project: DB menyimpan imageUrl/projectUrl/techStack, sedangkan
+// frontend membaca images/link/technologies. Selaraskan keduanya.
+function serializeProject(p) {
+    if (!p) return null;
+    return {
+        id: p.id,
+        title: p.title,
+        description: p.description,
+        imageUrl: p.imageUrl || "",
+        images: (p.imageUrl ? [p.imageUrl] : []),
+        projectUrl: p.projectUrl || p.link || "",
+        link: p.projectUrl || p.link || "",
+        techStack: p.techStack || [],
+        technologies: p.techStack || [],
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt
+    };
+}
+
+function toArray(val) {
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string') return val.split(',').map(t => t.trim()).filter(Boolean);
+    return [];
+}
 
 // GET /api/projects - Mengambil semua project dari database
 app.get('/api/projects', async (req, res) => {
@@ -277,12 +319,12 @@ app.get('/api/projects', async (req, res) => {
         });
         res.json({
             success: true,
-            data: projects
+            data: projects.map(serializeProject)
         });
     } catch (error) {
         console.error(error);
-        // Tetap kembalikan JSON aman (array kosong), bukan HTTP 500 polos.
-        res.status(500).json({
+        // Tetap kembalikan JSON aman (array kosong) dengan HTTP 200 agar UI tidak crash.
+        res.status(200).json({
             success: false,
             data: [],
             message: "Failed to fetch projects."
@@ -307,12 +349,13 @@ app.get('/api/projects/:id', async (req, res) => {
 
         res.json({
             success: true,
-            data: project
+            data: serializeProject(project)
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({
+        res.status(200).json({
             success: false,
+            data: null,
             message: "Failed to fetch project."
         });
     }
@@ -321,7 +364,7 @@ app.get('/api/projects/:id', async (req, res) => {
 // POST /api/projects - Menambah project baru (multipart/form-data)
 app.post('/api/projects', upload.array('image', 20), async (req, res) => {
     try {
-        const { title, description, link } = req.body;
+        const { title, description, link, technologies } = req.body;
 
         if (!title || !description) {
             return res.status(400).json({
@@ -331,26 +374,28 @@ app.post('/api/projects', upload.array('image', 20), async (req, res) => {
         }
 
         // Gambar dikirim sebagai file multipart -> di-upload ke Supabase Storage,
-        // lalu URL publiknya disimpan ke kolom images di database.
+        // lalu URL publiknya disimpan ke kolom imageUrl.
         const images = await uploadFilesToSupabase(req.files);
 
         const newProject = await prisma.project.create({
             data: {
                 title,
                 description,
-                link: link || "",
-                images
+                projectUrl: link || "",
+                imageUrl: images[0] || "",
+                techStack: toArray(technologies)
             }
         });
 
         res.status(201).json({
             success: true,
-            data: newProject
+            data: serializeProject(newProject)
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({
+        res.status(200).json({
             success: false,
+            data: null,
             message: "Failed to create project."
         });
     }
@@ -360,7 +405,7 @@ app.post('/api/projects', upload.array('image', 20), async (req, res) => {
 app.put('/api/projects/:id', upload.array('image', 20), async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, description, link } = req.body;
+        const { title, description, link, technologies } = req.body;
 
         if (!title || !description) {
             return res.status(400).json({
@@ -381,30 +426,30 @@ app.put('/api/projects/:id', upload.array('image', 20), async (req, res) => {
         }
 
         // Gambar baru dikirim sebagai file -> di-upload ke Supabase Storage.
-        // Jika ada file baru gunakan URL hasil upload; jika tidak, pertahankan gambar lama.
-        let images = await uploadFilesToSupabase(req.files);
-        if (images.length === 0) {
-            images = existing.images || [];
-        }
+        // Jika ada gambar baru gunakan URL hasil upload; jika tidak, pertahankan.
+        const images = await uploadFilesToSupabase(req.files);
+        const imageUrl = images.length > 0 ? images[0] : (existing.imageUrl || "");
 
         const updatedProject = await prisma.project.update({
             where: { id },
             data: {
                 title,
                 description,
-                link: link || "",
-                images
+                projectUrl: link || existing.projectUrl || "",
+                imageUrl,
+                techStack: technologies !== undefined ? toArray(technologies) : (existing.techStack || [])
             }
         });
 
         res.json({
             success: true,
-            data: updatedProject
+            data: serializeProject(updatedProject)
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({
+        res.status(200).json({
             success: false,
+            data: null,
             message: "Failed to update project."
         });
     }
@@ -436,7 +481,8 @@ app.delete('/api/projects/:id', async (req, res) => {
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({
+        // Hindari HTTP 500 polos; beri JSON aman agar UI tidak crash.
+        res.status(200).json({
             success: false,
             message: "Failed to delete project."
         });
@@ -445,26 +491,40 @@ app.delete('/api/projects/:id', async (req, res) => {
 
 // ─── Experience CRUD ──────────────────────────────────────────────────────────
 
+// Serializer experience: DB menyimpan roleTitle/company/skills, sedangkan
+// frontend membaca role_title|role, organization|org, technologies|tags.
+function serializeExperience(e) {
+    if (!e) return null;
+    return {
+        id: e.id,
+        type: e.type || 'work',
+        period: e.period || "",
+        role_title: e.roleTitle || "",
+        role: e.roleTitle || "",
+        roleTitle: e.roleTitle || "",
+        organization: e.company || "",
+        org: e.company || "",
+        company: e.company || "",
+        description: e.description || "",
+        technologies: e.skills || [],
+        tags: e.skills || [],
+        skills: e.skills || [],
+        is_current: e.is_current === undefined ? false : !!e.is_current,
+        createdAt: e.createdAt,
+        updatedAt: e.updatedAt
+    };
+}
+
 // Normalisasi payload experience dari frontend (mendukung dua bentuk kolom:
 // role/organization/period/tags yang dikirim project-form.js, dan bentuk PRD
 // role_title/organization/start_date/end_date/is_current).
 function normalizeExperience(body) {
-    const toArray = (val) => {
-        if (Array.isArray(val)) return val;
-        if (typeof val === 'string') return val.split(',').map(t => t.trim()).filter(Boolean);
-        return [];
-    };
-
     return {
-        type: body.type || 'work',
-        role_title: body.role_title || body.role || '',
-        organization: body.organization || body.org || '',
-        period: body.period || '',
-        start_date: body.start_date || '',
-        end_date: body.end_date || '',
-        is_current: body.is_current === undefined ? false : !!body.is_current,
+        period: body.period || body.start_date || '',
+        roleTitle: body.roleTitle || body.role_title || body.role || '',
+        company: body.company || body.organization || body.org || '',
         description: body.description || '',
-        technologies: toArray(body.technologies || body.tags)
+        skills: toArray(body.skills || body.technologies || body.tags)
     };
 }
 
@@ -476,12 +536,12 @@ app.get('/api/experiences', async (req, res) => {
         });
         res.json({
             success: true,
-            data: experiences
+            data: experiences.map(serializeExperience)
         });
     } catch (error) {
         console.error(error);
-        // Tetap kembalikan JSON aman (array kosong), bukan HTTP 500 polos.
-        res.status(500).json({
+        // Tetap kembalikan JSON aman (array kosong) dengan HTTP 200 agar UI tidak crash.
+        res.status(200).json({
             success: false,
             data: [],
             message: "Failed to fetch experiences."
@@ -506,12 +566,13 @@ app.get('/api/experiences/:id', async (req, res) => {
 
         res.json({
             success: true,
-            data: experience
+            data: serializeExperience(experience)
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({
+        res.status(200).json({
             success: false,
+            data: null,
             message: "Failed to fetch experience."
         });
     }
@@ -522,7 +583,7 @@ app.post('/api/experiences', async (req, res) => {
     try {
         const data = normalizeExperience(req.body);
 
-        if (!data.role_title || !data.organization) {
+        if (!data.roleTitle || !data.company) {
             return res.status(400).json({
                 success: false,
                 message: "Role and organization are required."
@@ -533,12 +594,13 @@ app.post('/api/experiences', async (req, res) => {
 
         res.status(201).json({
             success: true,
-            data: newExperience
+            data: serializeExperience(newExperience)
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({
+        res.status(200).json({
             success: false,
+            data: null,
             message: "Failed to create experience."
         });
     }
@@ -565,12 +627,13 @@ app.put('/api/experiences/:id', async (req, res) => {
 
         res.json({
             success: true,
-            data: updatedExperience
+            data: serializeExperience(updatedExperience)
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({
+        res.status(200).json({
             success: false,
+            data: null,
             message: "Failed to update experience."
         });
     }
@@ -597,7 +660,8 @@ app.delete('/api/experiences/:id', async (req, res) => {
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({
+        // Hindari HTTP 500 polos; beri JSON aman agar UI tidak crash.
+        res.status(200).json({
             success: false,
             message: "Failed to delete experience."
         });
