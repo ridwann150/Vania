@@ -377,7 +377,6 @@ function renderEmptyProjects() {
 // ─── Public Profile (About + Experience) ──────────────────────────────────────
 
 function loadPublicProfile() {
-    var aboutBodyEl = document.getElementById("aboutBody");
 
     function renderProfileData(data) {
         var name = data.full_name || "";
@@ -395,10 +394,21 @@ function loadPublicProfile() {
             el.textContent = bio;
         });
 
-        if (aboutBodyEl && data.about_me) {
-            aboutBodyEl.innerHTML = (data.about_me || "").split("\n").filter(Boolean).map(function (p) {
-                return '<p>' + escapeHtml(p) + '</p>';
-            }).join("");
+        // Render teks About ke container #about-text-content.
+        // Data berasal dari data.bio (atau data.about_me bila ada).
+        var aboutContainer = document.getElementById("about-text-content");
+        if (aboutContainer) {
+            var aboutText = data.bio || data.about_me || "";
+            if (aboutText) {
+                aboutContainer.innerHTML = aboutText
+                    .split("\n\n")
+                    .map(function (paragraph) {
+                        return "<p>" + escapeHtml(paragraph).replace(/\n/g, "<br>") + "</p>";
+                    })
+                    .join("");
+            } else {
+                aboutContainer.innerHTML = '<p class="empty-list">No about content to display yet.</p>';
+            }
         }
     }
 
@@ -420,8 +430,9 @@ function loadPublicProfile() {
             renderProfileData(result.data || {});
         })
         .catch(function () {
-            if (aboutBodyEl) {
-                aboutBodyEl.innerHTML = '<p class="empty-list">No about content to display yet.</p>';
+            var fallbackContainer = document.getElementById("about-text-content");
+            if (fallbackContainer) {
+                fallbackContainer.innerHTML = '<p class="empty-list">No about content to display yet.</p>';
             }
         });
 }
