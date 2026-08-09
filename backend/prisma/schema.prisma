@@ -34,3 +34,14 @@ model Experience {
   tags         String[] @default([])
   createdAt    DateTime @default(now())
 }
+
+model Profile {
+  id        String   @id
+  full_name String   @default("")
+  title     String   @default("")
+  tagline   String   @default("")
+  bio       String   @default("")
+  about_me  String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

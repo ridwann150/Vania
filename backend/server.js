@@ -25,22 +25,15 @@ const PORT = process.env.PORT || 5000;
 
 // CORS: izinkan akses dari frontend Vercel production.
 // Auth menggunakan localStorage (bukan cookie), jadi credentials tidak perlu.
-const ALLOWED_ORIGINS = [
-    'https://ridwanmaulana.vercel.app',
-    'https://ridwanmaulana-git-main.vercel.app'
-];
-
 app.use(cors({
-    origin: function (origin, callback) {
-        // Izinkan request kosong (misalnya dari tools seperti curl/postman)
-        if (!origin) return callback(null, true);
-        if (ALLOWED_ORIGINS.indexOf(origin) !== -1) {
-            return callback(null, true);
-        }
-        return callback(null, false);
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE']
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma']
 }));
+
+// Dukung preflight (OPTIONS) secara eksplisit untuk semua route.
+// (Express 5 / path-to-regexp v8: gunakan '*splat' sebagai wildcard root.)
+app.options('*splat', cors());
 
 // Express middleware untuk membaca request body berformat JSON
 app.use(express.json());
@@ -204,6 +197,76 @@ app.post('/api/login', async (req, res) => {
         });
     }
 });
+
+// ─── Profile CRUD (About) ──────────────────────────────────────────────────────
+
+// Semua muatan payload yang sama untuk /api/profile, /api/about, dan /api/user.
+function profilePayload(body) {
+    function str(v) { return typeof v === 'string' ? v.trim() : ''; }
+    return {
+        full_name: str(body.full_name ?? body.name) || '',
+        title: str(body.title ?? body.tagline) || '',
+        tagline: str(body.tagline) || '',
+        bio: str(body.bio ?? body.short_bio) || '',
+        about_me: str(body.about_me ?? body.about) || ''
+    };
+}
+
+// Ambil (atau buat bila belum ada) data profil tunggal.
+async function getOrCreateProfile() {
+    const PROFILE_ID = 'about';
+    let profile = await prisma.profile.findUnique({ where: { id: PROFILE_ID } });
+    if (!profile) {
+        profile = await prisma.profile.create({
+            data: {
+                id: PROFILE_ID,
+                full_name: "Vania Anggraini",
+                title: "Student Digital Business",
+                tagline: "Student Digital Business",
+                bio: "Passionate about digital transformation, business strategy, and the intersection of technology and commerce.",
+                about_me: "Hi, I'm Vania Anggraini — a Digital Business student..."
+            }
+        });
+    }
+    return profile;
+}
+
+// GET /api/profile (alias /api/about, /api/user) - Mengambil data profil/about.
+async function handleGetProfile(req, res) {
+    try {
+        const profile = await getOrCreateProfile();
+        res.json({ success: true, data: profile });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Failed to fetch profile." });
+    }
+}
+
+app.get('/api/profile', handleGetProfile);
+app.get('/api/about', handleGetProfile);
+app.get('/api/user', handleGetProfile);
+
+// PUT /api/profile (alias /api/about, /api/user) - Memperbarui data profil/about
+async function handlePutProfile(req, res) {
+    try {
+        if (!req.body || typeof req.body !== 'object') {
+            return res.status(400).json({ success: false, message: "Invalid profile payload." });
+        }
+        const data = profilePayload(req.body);
+        const existing = await prisma.profile.findUnique({ where: { id: 'about' } });
+        const profile = existing
+            ? await prisma.profile.update({ where: { id: 'about' }, data })
+            : await prisma.profile.create({ data: { id: 'about', ...data } });
+        res.json({ success: true, data: profile });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Failed to update profile." });
+    }
+}
+
+app.put('/api/profile', handlePutProfile);
+app.put('/api/about', handlePutProfile);
+app.put('/api/user', handlePutProfile);
 
 // GET /api/projects - Mengambil semua project dari database
 app.get('/api/projects', async (req, res) => {
